@@ -2,6 +2,7 @@ import logging
 
 import pandas as pd
 from pymongo import MongoClient
+from pymongo.cursor import Cursor
 
 from config import MONGODB_PARAMS
 
@@ -25,8 +26,8 @@ class SFDataset:
         """
         if self.data:
             logging.warning("Dataset object was not empty. Overriding...")
-        cursor = self.__mongo_collection.find(query).limit(10)
-        self.data = pd.DataFrame(list(cursor))  # TODO: make a "__cursor_to_df" function
+        cursor = self.__mongo_collection.find(query, {"_id": False}).limit(10)
+        self.data = self.__cursor_to_df(cursor)
 
     def list_available_fields(self):
         """
@@ -34,3 +35,10 @@ class SFDataset:
         """
         # TODO implement this if possible (mongodb is schema-less)
         return self.__mongo_collection.find_one()
+
+    @staticmethod
+    def __cursor_to_df(cursor: Cursor):
+        """
+        Extract data from a MongoDB cursor into a Pandas dataframe
+        """
+        return pd.DataFrame([element["value"] for element in cursor])
