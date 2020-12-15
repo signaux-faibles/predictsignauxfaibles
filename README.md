@@ -77,7 +77,7 @@ model = SFModelGAM.from_config_file("prod")
 model = SFModelGAM.from_config_file("models/1.2.15/config.yaml")
 ```
 
-Entainer le modèle, l'évaluer, le sauvegarder pour plus tard, générer des prédictions
+Entrainer le modèle, l'évaluer, le sauvegarder pour plus tard, générer des prédictions
 
 ```python
 
