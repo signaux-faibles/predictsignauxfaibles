@@ -5,6 +5,7 @@ from pymongo import MongoClient
 from pymongo.cursor import Cursor
 
 from config import MONGODB_PARAMS
+from lib.utils import MongoDBQuery
 
 
 class SFDataset:
@@ -20,14 +21,35 @@ class SFDataset:
         )
         self.data = None
 
-    def get_data(self, query: str):
+    def get_data(
+        self,
+        # date_min: str = None,
+        # date_max: str = None,
+        # sample_size: int = None,
+        # batch: str = "latest",
+        find_query: str = None,
+        limit: int = 0,  # no limit
+    ):
         """
         Retrieve query from MongoDB database
+
+
+        sample_size: max number of (siret x period) rows to retrieve
+
         """
         if self.data:
             logging.warning("Dataset object was not empty. Overriding...")
-        cursor = self.__mongo_collection.find(query, {"_id": False}).limit(10)
+
+        if find_query:
+            cursor = self.__mongo_collection.find(find_query, {"_id": False}).limit(
+                limit
+            )
+        else:
+            mongo_pipeline = MongoDBQuery().add_limit(1).to_pipeline()  # TODO
+            cursor = self.__mongo_collection.aggregate(mongo_pipeline)
+
         self.data = self.__cursor_to_df(cursor)
+        return self
 
     def list_available_fields(self):
         """
