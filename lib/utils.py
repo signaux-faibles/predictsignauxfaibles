@@ -16,7 +16,7 @@ class MongoParams(NamedTuple):
 
 class MongoDBQuery:
     """
-    TODO
+    Helper class used to build MongoDB pipelines
     """
 
     def __init__(self):
@@ -27,9 +27,16 @@ class MongoDBQuery:
         self.replace_root_stage = None
         self.project_stage = None
 
-    def add_standard_match(self, date_inf, date_sup, min_effectif, batch):
+    def add_standard_match(
+        self, date_min: str, date_max: str, min_effectif: int, batch: str
+    ):
         """
-        TODO
+        Adds a match stage to the pipeline.
+        Args:
+            date_min: first period to include, in the 'YYYY-MM-DD' format
+            date_max: first period to exclude, in the 'YYYY-MM-DD' format
+            min_effectif: the minimum number of employees a firm must have to be included
+            batch: batch_id of the dataset to retrieve
         """
         self.match_stage = {
             "$match": {
@@ -37,8 +44,8 @@ class MongoDBQuery:
                     {"_id.batch": batch},
                     {
                         "_id.periode": {
-                            "$gte": self.__date_to_iso(date_inf),
-                            "$lt": self.__date_to_iso(date_sup),
+                            "$gte": self.__date_to_iso(date_min),
+                            "$lt": self.__date_to_iso(date_max),
                         }
                     },
                     {"value.effectif": {"$gte": min_effectif}},
@@ -52,7 +59,8 @@ class MongoDBQuery:
 
     def add_sort(self):
         """
-        TODO
+        Adds a sort stage to the pipeline in order to always retrieve the same sample
+        from the Features collection.
         """
         self.sort_stage = {"$sort": {"value.random_order": -1}}
         self.pipeline.append(self.sort_stage)
@@ -60,7 +68,7 @@ class MongoDBQuery:
 
     def add_limit(self, limit: int):
         """
-        TODO
+        Adds a limit stage to the pipeline.
         """
         self.limit_stage = {"$limit": limit}
         self.pipeline.append(self.limit_stage)
@@ -68,7 +76,7 @@ class MongoDBQuery:
 
     def add_replace_root(self):
         """
-        TODO
+        Adds a replace root stage to the pipeline.
         """
         self.replace_root_stage = {"$replaceRoot": {"newRoot": "$value"}}
         self.pipeline.append(self.replace_root_stage)
@@ -76,21 +84,22 @@ class MongoDBQuery:
 
     def add_projection(self, fields: List):
         """
-        TODO
+        Adds a projection stage to filter only the fields in which we are interested.
         """
         self.project_stage = {"$project": {field: 1 for field in fields}}
         self.pipeline.append(self.project_stage)
         return self
 
-    def to_pipeline(self):
+    def to_pipeline(self) -> List:
         """
-        TODO
+        Returns the pipeline.
         """
         return self.pipeline
 
     @staticmethod
     def __date_to_iso(date: str):
         """
-        TODO
+        Converts a date in the YYYY-MM-DD format into a
+        datetime usable by mongodb"
         """
         return pytz.utc.localize(datetime.strptime(date, "%Y-%m-%d"))
