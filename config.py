@@ -15,3 +15,6 @@ MONGODB_PARAMS = MongoParams(
     db=os.getenv("MONGO_DB", "prod"),
     collection=os.getenv("MONGO_COLLECTION", "Features"),
 )
+
+MIN_EFFECTIF = 10
+BATCH_ID = "2009_5"
