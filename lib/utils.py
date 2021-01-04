@@ -27,8 +27,13 @@ class MongoDBQuery:
         self.replace_root_stage = None
         self.project_stage = None
 
-    def add_standard_match(
-        self, date_min: str, date_max: str, min_effectif: int, batch: str
+    def add_standard_match(  # pylint: disable=too-many-arguments
+        self,
+        date_min: str,
+        date_max: str,
+        min_effectif: int,
+        batch: str,
+        sirets: List = None,
     ):
         """
         Adds a match stage to the pipeline.
@@ -52,6 +57,9 @@ class MongoDBQuery:
                 ]
             }
         }
+
+        if sirets is not None:
+            self.match_stage["$match"]["$and"].append({"_id.siret": {"$in": sirets}})
 
         self.pipeline.append(self.match_stage)
 

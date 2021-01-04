@@ -119,6 +119,10 @@ Récuperer un dataset:
 
 ```python
 dataset = SFDataset()
-dataset.get_data(fields = ["outcome", "periode", "siret"], sample_size = 500)
+dataset.get_data(
+    fields = ["outcome", "periode", "siret"],
+    sirets = ["12345618900022", "12345618!00022"],
+    sample_size = 500
+)
 dataset.data # a DataFrame 
 ```

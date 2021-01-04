@@ -42,7 +42,7 @@ class SFDataset:
 
         Additionally, the following parameters are recognized:
             min_effectif: the minimum number of employees a firm must have to be in the sample.
-            batch: batch_id of the dataset to retrieve. Default is latest available.
+            sirets: a list of SIRET to select.
             find_query: override all previous parameters and evaluate a custom MongoDB find query.
         """
         if self.data is not None:
@@ -56,8 +56,9 @@ class SFDataset:
             )
         else:
             min_effectif = kwargs.get("min_effectif", MIN_EFFECTIF)
+            sirets = kwargs.get("sirets")
             self.mongo_pipeline.add_standard_match(
-                date_min, date_max, min_effectif, self.batch_id
+                date_min, date_max, min_effectif, self.batch_id, sirets=sirets
             )
             self.mongo_pipeline.add_sort()
             self.mongo_pipeline.add_limit(sample_size)
