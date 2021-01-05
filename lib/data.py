@@ -48,6 +48,9 @@ class SFDataset:
             min_effectif: the minimum number of employees a firm must have to be in the sample.
             sirets: a list of SIRET to select.
         """
+
+        self.mongo_pipeline.reset()
+
         if self.data is not None:
             logging.warning("Dataset object was not empty. Overriding...")
 
