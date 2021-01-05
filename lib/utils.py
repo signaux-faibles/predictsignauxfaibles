@@ -104,6 +104,12 @@ class MongoDBQuery:
         """
         return self.pipeline
 
+    def reset(self):
+        """
+        Empties the pipeline.
+        """
+        self.pipeline = []
+
     @staticmethod
     def __date_to_iso(date: str):
         """

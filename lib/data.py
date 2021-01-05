@@ -5,26 +5,29 @@ import pandas as pd
 from pymongo import MongoClient
 from pymongo.cursor import Cursor
 
-from config import MONGODB_PARAMS, MIN_EFFECTIF, BATCH_ID
+import config
 from lib.utils import MongoDBQuery
 
 
 class SFDataset:
     """
-    Retrieve a signaux faibles dataset
+    Retrieve a signaux faibles dataset.
+    The batch_id argument is optional and by default is the one contained in your .env file.
     """
 
     def __init__(self, batch_id: str = "default"):
-        self.__mongo_client = MongoClient(host=MONGODB_PARAMS.url)
-        self.__mongo_database = self.__mongo_client.get_database(MONGODB_PARAMS.db)
+        self.__mongo_client = MongoClient(host=config.MONGODB_PARAMS.url)
+        self.__mongo_database = self.__mongo_client.get_database(
+            config.MONGODB_PARAMS.db
+        )
         self.__mongo_collection = self.__mongo_database.get_collection(
-            MONGODB_PARAMS.collection
+            config.MONGODB_PARAMS.collection
         )
         self.data = None
-        self.batch_id = BATCH_ID if batch_id == "default" else batch_id
+        self.batch_id = config.BATCH_ID if batch_id == "default" else batch_id
         self.mongo_pipeline = MongoDBQuery()
 
-    def get_data(
+    def fetch_data(
         self,
         date_min: str = "1970-01-01",
         date_max: str = "3000-01-01",
@@ -34,6 +37,7 @@ class SFDataset:
     ):
         """
         Retrieve query from MongoDB database using the Aggregate framework
+        Store the resulting data in the `data` attribute
         Args:
             date_min: first period to include, in the 'YYYY-MM-DD' format. Default is first.
             date_max: first period to exclude, in the 'YYYY-MM-DD' format Default is latest.
@@ -43,40 +47,30 @@ class SFDataset:
         Additionally, the following parameters are recognized:
             min_effectif: the minimum number of employees a firm must have to be in the sample.
             sirets: a list of SIRET to select.
-            find_query: override all previous parameters and evaluate a custom MongoDB find query.
         """
         if self.data is not None:
             logging.warning("Dataset object was not empty. Overriding...")
 
-        if "find_query" in kwargs:
-            find_query = kwargs["find_query"]
-            logging.info(f"Using custom query {find_query}")
-            cursor = self.__mongo_collection.find(find_query, {"_id": False}).limit(
-                sample_size
-            )
-        else:
-            min_effectif = kwargs.get("min_effectif", MIN_EFFECTIF)
-            sirets = kwargs.get("sirets")
-            self.mongo_pipeline.add_standard_match(
-                date_min, date_max, min_effectif, self.batch_id, sirets=sirets
-            )
-            self.mongo_pipeline.add_sort()
-            self.mongo_pipeline.add_limit(sample_size)
-            self.mongo_pipeline.add_replace_root()
+        min_effectif = kwargs.get("min_effectif", config.MIN_EFFECTIF)
+        sirets = kwargs.get("sirets")
+        self.mongo_pipeline.add_standard_match(
+            date_min, date_max, min_effectif, self.batch_id, sirets=sirets
+        )
+        self.mongo_pipeline.add_sort()
+        self.mongo_pipeline.add_limit(sample_size)
+        self.mongo_pipeline.add_replace_root()
 
-            if fields is not None:
-                self.mongo_pipeline.add_projection(fields)
+        if fields is not None:
+            self.mongo_pipeline.add_projection(fields)
 
-            cursor = self.__mongo_collection.aggregate(
-                self.mongo_pipeline.to_pipeline()
-            )
+        cursor = self.__mongo_collection.aggregate(self.mongo_pipeline.to_pipeline())
 
         self.data = self.__cursor_to_df(cursor)
         return self
 
     def summarize_dataset(self):
         """
-        Returns a summary of the dataset.
+        Returns a summary of the current state of the dataset.
         """
         summary = {
             "batch_id": self.batch_id,
@@ -84,7 +78,7 @@ class SFDataset:
             "has_data": False,
         }
 
-        if self.data is not None:
+        if isinstance(self.data, pd.DataFrame):
             summary["has_data"] = True
             summary["fields"] = self.data.columns
 
@@ -116,5 +110,4 @@ class SFDataset:
         """
         Extract data from a MongoDB cursor into a Pandas dataframe
         """
-        # return pd.DataFrame([element["value"] for element in cursor])
         return pd.DataFrame(cursor)
