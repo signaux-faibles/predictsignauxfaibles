@@ -51,7 +51,7 @@ class SFDataset:
         if self.data is not None:
             logging.warning("Dataset object was not empty. Overriding...")
 
-        min_effectif = kwargs.get("min_effectif", config.MIN_EFFECTIF)
+        min_effectif = int(kwargs.get("min_effectif", config.MIN_EFFECTIF))
         sirets = kwargs.get("sirets")
         self.mongo_pipeline.add_standard_match(
             date_min, date_max, min_effectif, self.batch_id, sirets=sirets

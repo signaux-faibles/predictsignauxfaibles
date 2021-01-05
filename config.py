@@ -19,5 +19,5 @@ MONGODB_PARAMS = MongoParams(
 )
 
 # Other parameters (maybe group them into coherent groups one day...)
-MIN_EFFECTIF = os.getenv("MIN_EFFECTIF")
+MIN_EFFECTIF = int(os.getenv("MIN_EFFECTIF"))
 BATCH_ID = os.getenv("BATCH_ID")
