@@ -113,3 +113,16 @@ sf_dataset.get_data(
 
 predictions = model.predict(sf_dataset.data)
 ```
+
+
+Récuperer un dataset:
+
+```python
+dataset = SFDataset()
+dataset.fetch_data(
+    fields = ["outcome", "periode", "siret"],
+    sirets = ["12345618900022", "12345618!00022"],
+    sample_size = 500
+)
+dataset.data # a DataFrame 
+```

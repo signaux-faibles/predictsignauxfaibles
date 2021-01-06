@@ -24,3 +24,5 @@ jobs:
       - name: Test with pytest
         run: |
           python -m pytest
+        env:
+          MIN_EFFECTIF: 10

@@ -126,3 +126,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# ignore notebooks prefaced with "dev"
+notebooks/dev-*
