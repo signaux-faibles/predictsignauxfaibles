@@ -21,3 +21,28 @@ MONGODB_PARAMS = MongoParams(
 # Other parameters (maybe group them into coherent groups one day...)
 MIN_EFFECTIF = os.getenv("MIN_EFFECTIF")
 BATCH_ID = os.getenv("BATCH_ID")
+
+# Default values for data
+DEFAULT_DATA_VALUES = {
+    "montant_part_patronale": 0,
+    "montant_part_ouvriere": 0,
+    "montant_echeancier": 0,
+    "ratio_dette": 0,
+    "ratio_dette_moy12m": 0,
+    "montant_part_patronale_past_1": 0,
+    "montant_part_ouvriere_past_1": 0,
+    "montant_part_patronale_past_2": 0,
+    "montant_part_ouvriere_past_2": 0,
+    "montant_part_patronale_past_3": 0,
+    "montant_part_ouvriere_past_3": 0,
+    "montant_part_patronale_past_6": 0,
+    "montant_part_ouvriere_past_6": 0,
+    "montant_part_patronale_past_12": 0,
+    "montant_part_ouvriere_past_12": 0,
+    "apart_heures_consommees": 0,
+    "apart_heures_autorisees": 0,
+    "apart_entreprise": 0,
+    "tag_default": False,
+    "tag_failure": False,
+    "tag_outcome": False,
+}
