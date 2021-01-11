@@ -2,9 +2,13 @@
 
 from abc import ABC, abstractmethod
 import logging
-from typing import List
+from typing import List, Tuple
 
+from pygam import LogisticGAM
 import pandas as pd
+from sklearn.model_selection import train_test_split
+
+from lib.data import SFDataset
 
 
 class SFModel(ABC):
@@ -13,11 +17,14 @@ class SFModel(ABC):
     Used to define the main interfaces that a model must implement.
     """
 
-    def __init__(self):
-        self.data = {"training": None, "testing": None}
+    def __init__(self, features: List, target: str):
+        self.x_train = None
+        self.y_train = None
+        self.x_test = None
+        self.y_test = None
         self.model = None
-        self.features = []
-        self.target = None
+        self.features = features
+        self.target = target
         self._is_trained = False
         self._performance = None
 
@@ -29,17 +36,7 @@ class SFModel(ABC):
         # parse information needed to instantiate SFModel from config file
         logging.info(f"Instantiating SFModel with config found in {path_to_file}")
         # return the instantiated SFModel object
-        return cls()
-
-    @abstractmethod
-    def get_data(
-        self,
-        sirens: List = None,
-        sirets: List = None,
-    ):
-        """
-        Populate the data field with data from prod.db.Features
-        """
+        return cls()  # pylint: disable=no-value-for-parameter
 
     @abstractmethod
     def train(self):
@@ -68,3 +65,43 @@ class SFModel(ABC):
         logging.info("Saving model.")
         logging.info("Model saved in /here/model.pickle")
         return self
+
+    def _split_train_test(self, dataset: pd.DataFrame) -> Tuple:  # FIXME
+        features = dataset[self.features]
+        target = dataset[[self.target]]
+        return train_test_split(features, target, test_size=0.3)
+
+
+class SFModelGAM(SFModel):
+    """
+    Generalised Additive Model (GAM)
+    From package `pygam`
+    """
+
+    def __init__(self, dataset: SFDataset, features: List, target: str = "outcome"):
+        super().__init__(features, target)
+        self.x_train, self.x_test, self.y_train, self.y_test = self._split_train_test(
+            dataset.data
+        )
+        self.model = LogisticGAM()
+
+    def train(self):
+        """
+        Train a GAM model on the data
+        """
+        self.model.fit(self.x_train, self.y_train)
+        self._is_trained = True
+        return self
+
+    def evaluate(self):
+        """
+        Evaluate model using pyGAM
+        """
+        self._performance = self.model.accuracy(self.x_test, self.y_test)
+        return self._performance
+
+    def predict(self, new_data: pd.DataFrame):
+        """
+        Use the trained model to make predictions on new data
+        """
+        return self.model.predict(new_data)
