@@ -1,4 +1,4 @@
 .PHONY = dependencies
 
 dependencies:
-	pip freeze | grep -Ev -- "pytest|githooks|pylint|black" > requirements.txt
+	pip freeze | grep -Ev -- "pytest|githooks|pylint|black|matplotlib" > requirements.txt

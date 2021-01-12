@@ -71,7 +71,53 @@ class SFDataset:
         self.data = self.__cursor_to_df(cursor)
         return self
 
-    def summarize_dataset(self):
+    def prepare_data(self):
+        """
+        Run data preparation operations on the dataset.
+        """
+        assert isinstance(
+            self.data, pd.DataFrame
+        ), "DataFrame not found. Please fetch data first."
+
+        logging.info("Creating a `siren` column")
+        self._add_siren()
+
+        logging.info("Replacing missing data with default values")
+        self._replace_missing_data(defaults_map=config.DEFAULT_DATA_VALUES)
+
+        logging.info("Drop observations with missing required fields.")
+        self._remove_na()
+
+    def _add_siren(self):
+        """
+        Add a `siren` column to the dataset.
+        """
+        assert "siret" in self.data.columns, "siret column not found"
+        self.data["siren"] = self.data["siret"].apply(lambda siret: siret[:9])
+
+    def _replace_missing_data(self, defaults_map: dict):
+        """
+        Replace missing data with defaults defined in project config
+        Args:
+            defaults_map: a dictionnary in the {column_name: default_value} format
+        """
+        for column in defaults_map:
+            try:
+                self.data[column] = self.data[column].fillna(defaults_map.get(column))
+            except KeyError:
+                logging.debug(f"Column {column} not in dataset")
+                continue
+
+    def _remove_na(self):
+        """
+        Remove all observations with missing values.
+        """
+        logging.info("Removing NAs from dataset.")
+        logging.info(f"Number of observations before: {len(self.data.index)}")
+        self.data.dropna(inplace=True)
+        logging.info(f"Number of observations after: {len(self.data.index)}")
+
+    def _summarize_dataset(self):
         """
         Returns a summary of the current state of the dataset.
         """
@@ -88,7 +134,7 @@ class SFDataset:
         return summary
 
     def __repr__(self):
-        summary = self.summarize_dataset()
+        summary = self._summarize_dataset()
         out = f"""
         -----------------------
         Signaux Faibles Dataset
