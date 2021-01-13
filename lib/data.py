@@ -53,16 +53,21 @@ class SFDataset:
         self.mongo_pipeline = MongoDBQuery()
 
     @classmethod
-    def from_config_file(cls, path: str):
+    def from_config_file(cls, path: str, mode: str = "train"):
         """
         Instantiate a SFDataset object via a yaml config file
+        Args:
+            path: path to config file (typically in ./models/{version}/model.yml)
+            mode: "train" or "predict". Whether the dataset is for training or for predicting.
         """
         conf = parse_yml_config(path)
+        if mode not in {"train", "predict"}:
+            raise ValueError("'mode' must be one of 'train' or 'predict")
         return cls(
-            date_min=conf["train_on"]["start_date"],
-            date_max=conf["train_on"]["end_date"],
+            date_min=conf[f"{mode}_on"]["start_date"],
+            date_max=conf[f"{mode}_on"]["end_date"],
             fields=conf["features"] + [conf["target"]] + ["siret", "periode"],
-            sample_size=conf["train_on"]["sample_size"],
+            sample_size=conf[f"{mode}_on"].get("sample_size", 0),
             batch_id=conf["batch_id"],
         )
 
