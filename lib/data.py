@@ -6,16 +6,33 @@ from pymongo import MongoClient
 from pymongo.cursor import Cursor
 
 import config
-from lib.utils import MongoDBQuery
+from lib.utils import MongoDBQuery, parse_yml_config
 
 
 class SFDataset:
     """
     Retrieve a signaux faibles dataset.
-    The batch_id argument is optional and by default is the one contained in your .env file.
+    Args:
+        date_min: first period to include, in the 'YYYY-MM-DD' format. Default is first.
+        date_max: first period to exclude, in the 'YYYY-MM-DD' format Default is latest.
+        fields: which fields of the Features collection to retrieve. Default is all.
+        sample_size: max number of (siret x period) rows to retrieve. Default is all.
+        sirets: a list of SIRET to select.
+        batch_id : MongoDB batch id (defaults to your .env)
+        min_effectif: min number of employees for firm to be in the sample (defaults to your .env)
+
     """
 
-    def __init__(self, batch_id: str = "default"):
+    def __init__(  # pylint: disable=too-many-arguments
+        self,
+        date_min: str = "1970-01-01",
+        date_max: str = "3000-01-01",
+        fields: List = None,
+        sample_size: int = 0,  # a sample size of 0 means all data is retrieved
+        batch_id: str = "default",
+        min_effectif: int = "default",
+        sirets: List = None,
+    ):
         self.__mongo_client = MongoClient(host=config.MONGODB_PARAMS.url)
         self.__mongo_database = self.__mongo_client.get_database(
             config.MONGODB_PARAMS.db
@@ -24,29 +41,35 @@ class SFDataset:
             config.MONGODB_PARAMS.collection
         )
         self.data = None
+        self.date_min = date_min
+        self.date_max = date_max
+        self.fields = fields
+        self.sample_size = sample_size
         self.batch_id = config.BATCH_ID if batch_id == "default" else batch_id
+        self.min_effectif = (
+            config.MIN_EFFECTIF if min_effectif == "default" else min_effectif
+        )
+        self.sirets = sirets
         self.mongo_pipeline = MongoDBQuery()
 
-    def fetch_data(
-        self,
-        date_min: str = "1970-01-01",
-        date_max: str = "3000-01-01",
-        fields: List = None,
-        sample_size: int = 0,  # a sample size of 0 means all data is retrieved
-        **kwargs,
-    ):
+    @classmethod
+    def from_config_file(cls, path: str):
+        """
+        Instantiate a SFDataset object via a yaml config file
+        """
+        conf = parse_yml_config(path)
+        return cls(
+            date_min=conf["train_on"]["start_date"],
+            date_max=conf["train_on"]["end_date"],
+            fields=conf["features"] + [conf["target"]] + ["siret", "periode"],
+            sample_size=conf["train_on"]["sample_size"],
+            batch_id=conf["batch_id"],
+        )
+
+    def fetch_data(self):
         """
         Retrieve query from MongoDB database using the Aggregate framework
         Store the resulting data in the `data` attribute
-        Args:
-            date_min: first period to include, in the 'YYYY-MM-DD' format. Default is first.
-            date_max: first period to exclude, in the 'YYYY-MM-DD' format Default is latest.
-            fields: which fields of the Features collection to retrieve. Default is all.
-            sample_size: max number of (siret x period) rows to retrieve. Default is all.
-
-        Additionally, the following parameters are recognized:
-            min_effectif: the minimum number of employees a firm must have to be in the sample.
-            sirets: a list of SIRET to select.
         """
 
         self.mongo_pipeline.reset()
@@ -54,17 +77,19 @@ class SFDataset:
         if self.data is not None:
             logging.warning("Dataset object was not empty. Overriding...")
 
-        min_effectif = int(kwargs.get("min_effectif", config.MIN_EFFECTIF))
-        sirets = kwargs.get("sirets")
         self.mongo_pipeline.add_standard_match(
-            date_min, date_max, min_effectif, self.batch_id, sirets=sirets
+            self.date_min,
+            self.date_max,
+            self.min_effectif,
+            self.batch_id,
+            sirets=self.sirets,
         )
         self.mongo_pipeline.add_sort()
-        self.mongo_pipeline.add_limit(sample_size)
+        self.mongo_pipeline.add_limit(self.sample_size)
         self.mongo_pipeline.add_replace_root()
 
-        if fields is not None:
-            self.mongo_pipeline.add_projection(fields)
+        if self.fields is not None:
+            self.mongo_pipeline.add_projection(self.fields)
 
         cursor = self.__mongo_collection.aggregate(self.mongo_pipeline.to_pipeline())
 
@@ -117,39 +142,22 @@ class SFDataset:
         self.data.dropna(inplace=True)
         logging.info(f"Number of observations after: {len(self.data.index)}")
 
-    def _summarize_dataset(self):
-        """
-        Returns a summary of the current state of the dataset.
-        """
-        summary = {
-            "batch_id": self.batch_id,
-            "pipeline": self.mongo_pipeline.to_pipeline(),
-            "has_data": False,
-        }
-
-        if isinstance(self.data, pd.DataFrame):
-            summary["has_data"] = True
-            summary["fields"] = self.data.columns
-
-        return summary
-
     def __repr__(self):
-        summary = self._summarize_dataset()
         out = f"""
         -----------------------
         Signaux Faibles Dataset
         -----------------------
 
-        batch_id : {summary["batch_id"]}
+        batch_id : {self.batch_id}
         ---------- 
 
         Fields:
         -------
-            {summary["fields"]}
+            {self.fields if len(self.fields)>1 else "all"}
 
         MongoDB Aggregate Pipeline:
         ---------------------------
-            {summary["pipeline"]}
+            {self.mongo_pipeline.to_pipeline()}
         """
 
         return out
