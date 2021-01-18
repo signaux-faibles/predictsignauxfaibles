@@ -1,7 +1,12 @@
+from pathlib import Path
 from typing import NamedTuple, List
 
 from datetime import datetime
+import jsonschema
 import pytz
+import yaml
+
+import config
 
 
 class MongoParams(NamedTuple):
@@ -117,3 +122,27 @@ class MongoDBQuery:
         datetime usable by mongodb"
         """
         return pytz.utc.localize(datetime.strptime(date, "%Y-%m-%d"))
+
+
+def parse_yml_config(path: str):
+    """
+    Converts a YAML config file into a python object
+    Args:
+        path: a string path to the yaml file
+    """
+    parsed_path = Path(path)
+    if not parsed_path.exists():
+        raise ConfigFileError(f"path {parsed_path} does not exist")
+    if not parsed_path.is_file():
+        raise ConfigFileError(f"{parsed_path} is not a file")
+    if parsed_path.suffix != ".yml":
+        raise ConfigFileError("config file must be a .yml file")
+    data = yaml.load(parsed_path.read_bytes(), Loader=yaml.Loader)
+    jsonschema.validate(data, config.CONFIG_FILE_SCHEMA)
+    return data
+
+
+class ConfigFileError(Exception):
+    """
+    Error class for Configuration Files-related issues
+    """
