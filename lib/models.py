@@ -9,6 +9,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 
 from lib.data import SFDataset
+from lib.utils import parse_yml_config
 
 
 class SFModel(ABC):
@@ -17,7 +18,8 @@ class SFModel(ABC):
     Used to define the main interfaces that a model must implement.
     """
 
-    def __init__(self, features: List, target: str):
+    def __init__(self, dataset: SFDataset, features: List, target: str):
+        self.dataset = dataset
         self.x_train = None
         self.y_train = None
         self.x_test = None
@@ -29,14 +31,24 @@ class SFModel(ABC):
         self._performance = None
 
     @classmethod
-    def from_config_file(cls, path_to_file: str):
+    def from_config_file(cls, path: str):
         """
-        Instantiate a SFModel instance using a standardized config file template (e.g. a .yaml file)
+        Instantiate a SFModel object via a yaml config file
+        Args:
+            path: path to config file (typically in ./models/{version}/model.yml)
         """
         # parse information needed to instantiate SFModel from config file
-        logging.info(f"Instantiating SFModel with config found in {path_to_file}")
+        conf = parse_yml_config(path)
+        logging.info(f"Instantiating SFModel with config found in {path}")
+
+        # create dataset via config file
+        dataset = SFDataset.from_config_file(path).fetch_data()
+        dataset.prepare_data()
+
         # return the instantiated SFModel object
-        return cls()  # pylint: disable=no-value-for-parameter
+        return cls(
+            dataset=dataset, features=conf["features"], target=conf["target"]
+        )  # pylint: disable=no-value-for-parameter
 
     @abstractmethod
     def train(self):
@@ -79,7 +91,7 @@ class SFModelGAM(SFModel):
     """
 
     def __init__(self, dataset: SFDataset, features: List, target: str = "outcome"):
-        super().__init__(features, target)
+        super().__init__(dataset, features, target)
         self.x_train, self.x_test, self.y_train, self.y_test = self._split_train_test(
             dataset.data
         )
