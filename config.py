@@ -65,14 +65,7 @@ CONFIG_FILE_SCHEMA = {
             },
             "required": ["start_date", "end_date", "sample_size"],
         },
-        "predict_on": {
-            "type": "object",
-            "properties": {
-                "start_date": {"type": "string"},
-                "end_date": {"type": "string"},
-            },
-            "required": ["start_date", "end_date"],
-        },
+        "predict_on": {"type": "string"},
     },
     "required": [
         "name",
