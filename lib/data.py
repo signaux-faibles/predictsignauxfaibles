@@ -109,21 +109,11 @@ class SFDataset:
             self.data, pd.DataFrame
         ), "DataFrame not found. Please fetch data first."
 
-        logging.info("Creating a `siren` column")
-        self._add_siren()
-
         logging.info("Replacing missing data with default values")
         self._replace_missing_data(defaults_map=config.DEFAULT_DATA_VALUES)
 
         logging.info("Drop observations with missing required fields.")
         self._remove_na()
-
-    def _add_siren(self):
-        """
-        Add a `siren` column to the dataset.
-        """
-        assert "siret" in self.data.columns, "siret column not found"
-        self.data["siren"] = self.data["siret"].apply(lambda siret: siret[:9])
 
     def _replace_missing_data(self, defaults_map: dict):
         """
