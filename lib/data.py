@@ -118,6 +118,7 @@ class SFDataset:
         self._remove_na()
 
         if remove_strong_signals:
+            logging.info("Removing 'strong signals'.")
             self._remove_strong_signals()
 
         logging.info("Resetting index for DataFrame.")
