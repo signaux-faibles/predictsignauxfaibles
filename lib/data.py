@@ -125,13 +125,14 @@ class SFDataset:
         self.data.reset_index(drop=True, inplace=True)
 
     def _remove_strong_signals(self):
+        """
+        Strong signals is when a firm is already in default (time_til_outcome <= 0)
+        """
         assert (
             "time_til_outcome" in self.data.columns
         ), "The `time_til_outcome` column is needed in order to remove strong signals."
 
-        self.data = self.data.loc[
-            self.data["time_til_outcome"].isna() | self.data["time_til_outcome"] > 0
-        ]
+        self.data = self.data[~(self.data["time_til_outcome"] <= 0)]
 
     def _replace_missing_data(self, defaults_map: dict):
         """
@@ -174,6 +175,12 @@ class SFDataset:
         """
 
         return out
+
+    def __len__(self):
+        """
+        Length of SFDataset is the length of its dataframe
+        """
+        return len(self.data)
 
     @staticmethod
     def __cursor_to_df(cursor: Cursor):
