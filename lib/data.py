@@ -115,6 +115,9 @@ class SFDataset:
         logging.info("Drop observations with missing required fields.")
         self._remove_na()
 
+        logging.info("Resetting index for DataFrame.")
+        self.data.reset_index(inplace=True)
+
     def _replace_missing_data(self, defaults_map: dict):
         """
         Replace missing data with defaults defined in project config
