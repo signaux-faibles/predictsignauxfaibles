@@ -12,6 +12,7 @@ class SFModelEvaluator:
     """
     Evaluate the performances of a Signaux Faible model
     Input:
+        model: a SFModel instance (trained or not)
     """
 
     def __init__(self, model: SFModel):
@@ -50,6 +51,12 @@ class SFModelEvaluator:
         Evaluation metrics used to evaluate our Signaux Faible models.
         """
         return average_precision_score(y_true, y_score)
+
+    def __repr__(self):
+        return f"SFModelEvaluator (model : {type(self.model)})"
+
+    def __str__(self):
+        return self.__repr__()
 
 
 def make_sf_test_validate_splits(
