@@ -101,9 +101,11 @@ class SFDataset:
         self.data = self.__cursor_to_df(cursor)
         return self
 
-    def prepare_data(self):
+    def prepare_data(self, remove_strong_signals: bool = False):
         """
         Run data preparation operations on the dataset.
+        remove_strong_signals drops observations with time_til_outcome <= 0
+         (i.e. firms that are already in default).
         """
         assert isinstance(
             self.data, pd.DataFrame
@@ -115,8 +117,20 @@ class SFDataset:
         logging.info("Drop observations with missing required fields.")
         self._remove_na()
 
+        if remove_strong_signals:
+            self._remove_strong_signals()
+
         logging.info("Resetting index for DataFrame.")
-        self.data.reset_index(inplace=True)
+        self.data.reset_index(drop=True, inplace=True)
+
+    def _remove_strong_signals(self):
+        assert (
+            "time_til_outcome" in self.data.columns
+        ), "The `time_til_outcome` column is needed in order to remove strong signals."
+
+        self.data = self.data.loc[
+            self.data["time_til_outcome"].isna() | self.data["time_til_outcome"] > 0
+        ]
 
     def _replace_missing_data(self, defaults_map: dict):
         """
