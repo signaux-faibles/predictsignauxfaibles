@@ -123,6 +123,7 @@ class SFDataset:
 
         logging.info("Resetting index for DataFrame.")
         self.data.reset_index(drop=True, inplace=True)
+        return self
 
     def _remove_strong_signals(self):
         """
@@ -158,29 +159,23 @@ class SFDataset:
 
     def __repr__(self):
         out = f"""
-        -----------------------
-        Signaux Faibles Dataset
-        -----------------------
-
-        batch_id : {self.batch_id}
-        ---------- 
-
-        Fields:
-        -------
-            {self.fields if len(self.fields)>1 else "all"}
-
-        MongoDB Aggregate Pipeline:
-        ---------------------------
-            {self.mongo_pipeline.to_pipeline()}
+Signaux Faibles Dataset (batch_id : {self.batch_id})
+----------------------------------------------------
+{self.data.head() if isinstance(self.data, pd.DataFrame) else "Empty Dataset"}
+[...]
+----------------------------------------------------
+Number of observations = {len(self) if isinstance(self.data, pd.DataFrame) else "0"}
         """
-
         return out
+
+    def __str__(self):
+        return self.__repr__()
 
     def __len__(self):
         """
         Length of SFDataset is the length of its dataframe
         """
-        return len(self.data)
+        return len(self.data) if isinstance(self.data, pd.DataFrame) else 0
 
     @staticmethod
     def __cursor_to_df(cursor: Cursor):

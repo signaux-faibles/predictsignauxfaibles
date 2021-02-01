@@ -67,6 +67,15 @@ class SFModel(ABC):
         logging.info("Model saved in /here/model.pickle")
         return self
 
+    def __repr__(self):
+        return f"""
+SFModel wrapping {self.model}
+Predicting target "{self.target}" with {len(self.features)} features
+        """
+
+    def __str__(self):
+        return self.__repr__()
+
 
 class SFModelGAM(SFModel):
     """
