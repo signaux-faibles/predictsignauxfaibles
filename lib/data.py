@@ -101,16 +101,15 @@ class SFDataset:
         self.data = self.__cursor_to_df(cursor)
         return self
 
-    def prepare_data(self):
+    def prepare_data(self, remove_strong_signals: bool = False):
         """
         Run data preparation operations on the dataset.
+        remove_strong_signals drops observations with time_til_outcome <= 0
+         (i.e. firms that are already in default).
         """
         assert isinstance(
             self.data, pd.DataFrame
         ), "DataFrame not found. Please fetch data first."
-
-        logging.info("Creating a `siren` column")
-        self._add_siren()
 
         logging.info("Replacing missing data with default values")
         self._replace_missing_data(defaults_map=config.DEFAULT_DATA_VALUES)
@@ -118,12 +117,23 @@ class SFDataset:
         logging.info("Drop observations with missing required fields.")
         self._remove_na()
 
-    def _add_siren(self):
+        if remove_strong_signals:
+            logging.info("Removing 'strong signals'.")
+            self._remove_strong_signals()
+
+        logging.info("Resetting index for DataFrame.")
+        self.data.reset_index(drop=True, inplace=True)
+        return self
+
+    def _remove_strong_signals(self):
         """
-        Add a `siren` column to the dataset.
+        Strong signals is when a firm is already in default (time_til_outcome <= 0)
         """
-        assert "siret" in self.data.columns, "siret column not found"
-        self.data["siren"] = self.data["siret"].apply(lambda siret: siret[:9])
+        assert (
+            "time_til_outcome" in self.data.columns
+        ), "The `time_til_outcome` column is needed in order to remove strong signals."
+
+        self.data = self.data[~(self.data["time_til_outcome"] <= 0)]
 
     def _replace_missing_data(self, defaults_map: dict):
         """
@@ -149,23 +159,23 @@ class SFDataset:
 
     def __repr__(self):
         out = f"""
-        -----------------------
-        Signaux Faibles Dataset
-        -----------------------
-
-        batch_id : {self.batch_id}
-        ---------- 
-
-        Fields:
-        -------
-            {self.fields if len(self.fields)>1 else "all"}
-
-        MongoDB Aggregate Pipeline:
-        ---------------------------
-            {self.mongo_pipeline.to_pipeline()}
+Signaux Faibles Dataset (batch_id : {self.batch_id})
+----------------------------------------------------
+{self.data.head() if isinstance(self.data, pd.DataFrame) else "Empty Dataset"}
+[...]
+----------------------------------------------------
+Number of observations = {len(self) if isinstance(self.data, pd.DataFrame) else "0"}
         """
-
         return out
+
+    def __str__(self):
+        return self.__repr__()
+
+    def __len__(self):
+        """
+        Length of SFDataset is the length of its dataframe
+        """
+        return len(self.data) if isinstance(self.data, pd.DataFrame) else 0
 
     @staticmethod
     def __cursor_to_df(cursor: Cursor):
