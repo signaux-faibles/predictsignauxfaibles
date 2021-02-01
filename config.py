@@ -1,4 +1,5 @@
 import os
+import random
 
 from dotenv import load_dotenv, find_dotenv
 
@@ -77,3 +78,6 @@ CONFIG_FILE_SCHEMA = {
         "predict_on",
     ],
 }
+
+# set random seed for the whole repo
+random.seed(42)
