@@ -23,6 +23,12 @@ class SFModelEvaluator:
     def cv_evaluation(self, num_folds: int, validate_set: SFDataset):
         """
         Evaluate a model using custom cross-validation (see the repo's doc for more information)
+        Args:
+            num_folds = number of folds to use in Cross-validation
+            validate_set = a SFDataset containing the validation data
+
+        NB: evaluation will be biased if the validation set is not at least 18 months
+         away from the training set.
 
         Returns:
             A dictionary in the following format:
@@ -86,7 +92,7 @@ def make_sf_test_validate_splits(
     if len(train_data) < num_folds or len(validate_data) < num_folds:
         raise ValueError("num_folds must be smaller than the size of the smallest set")
 
-    if not isinstance(num_folds, int) or num_folds < 0:
+    if not isinstance(num_folds, int) or num_folds <= 0:
         raise ValueError("num_folds must be a strictly positive integer")
 
     # get list of SIREN in training data
