@@ -2,8 +2,9 @@
 Dépôt du code python permettant la production de liste de prédiction Signaux Faibles.
 
 ## Dépendances / pré-requis
-- python 3.8
+- python 3.6.4
 - Docker (:construction_worker:)
+- un accès à la base de données du projet
 
 ## Installation pour un développeur/data scientist :
 
@@ -16,15 +17,20 @@ cd predictsignauxfaibles
 ### créer un environnement virtuel python (recommandé)
 exemple avec [pyenv](https://github.com/pyenv/pyenv):
 ```
-pyenv install 3.8.0
-pyenv virtualenv 3.8.0 sf
+pyenv install 3.6.4
+pyenv virtualenv 3.6.4 sf
 pyenv local sf
 ```
 
+Note: sur le serveur, utiliser l'instalation par défaut de python (pour l'instant). Cf: [cette issue](https://github.com/signaux-faibles/predictsignauxfaibles/issues/20)
+
+
 ### installer les dépendences du projet
 ```
-pip install -r requirements-dev.txt
+pip install -r requirements.txt
 ```
+
+Note: la procédure sur le serveur est légèrement différente.
 
 ### activer les githooks
 ```
