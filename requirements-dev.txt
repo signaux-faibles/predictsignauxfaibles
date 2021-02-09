@@ -1,6 +1,0 @@
--r requirements.txt
-black==20.8b1
-matplotlib==3.3.3
-pylint==2.6.0
-pytest==6.1.2
-python-githooks==1.0.6
