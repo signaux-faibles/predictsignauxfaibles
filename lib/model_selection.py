@@ -5,6 +5,7 @@ import pandas as pd
 from sklearn.metrics import average_precision_score
 
 from lib.data import SFDataset
+from lib.decorators import is_random
 from lib.models import SFModel
 
 
@@ -65,6 +66,7 @@ class SFModelEvaluator:
         return self.__repr__()
 
 
+@is_random
 def make_sf_test_validate_splits(
     train_data: pd.DataFrame, validate_data: pd.DataFrame, num_folds: int
 ) -> dict:
