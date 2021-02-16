@@ -22,6 +22,8 @@ MONGODB_PARAMS = MongoParams(
 # Other parameters (maybe group them into coherent groups one day...)
 MIN_EFFECTIF = int(os.getenv("MIN_EFFECTIF"))
 BATCH_ID = os.getenv("BATCH_ID")
+RANDOM_SEED = os.getenv("RANDOM_SEED")
+RANDOM_SEED = int(RANDOM_SEED) if RANDOM_SEED is not None else False
 
 # Default values for data
 DEFAULT_DATA_VALUES = {
