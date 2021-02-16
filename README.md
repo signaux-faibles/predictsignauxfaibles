@@ -56,3 +56,21 @@ Commencer à travailler !
 ## Documentation
 
 Un notebook jupyter interactif de démo est disponible [ici](./notebooks/00-get_started.ipynb).
+
+## Gestion des fonctions aléatoires
+
+Les fonctions aléatoires doivent être décorées avec le décorateur `is_random` (dans `lib.decorators`).
+
+Dès lors, la variable d'environnement `RANDOM_SEED` permet aux fonctions aléatoires d'être déterministes. Par défaut, cela n'est pas le cas. Cette variable doit être un entier.
+
+Au début d'un notebook, vous pouvez créer cette variable d'environnement de la manière suivante :
+
+```python
+import os
+os.environ["RANDOM_SEED"]="42"
+```
+
+Ou depuis le terminal :
+```sh
+export RANDOM_SEED=42
+```
