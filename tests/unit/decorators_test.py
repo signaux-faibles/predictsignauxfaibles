@@ -17,6 +17,9 @@ def test_is_random_seeded():
 
 
 def test_is_random_not_seeded():
+    del os.environ["RANDOM_SEED"]
+
+    @is_random
     def random_function(mult=1):
         return randint(0, 100) * mult
 
