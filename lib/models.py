@@ -6,6 +6,7 @@ from pygam import LogisticGAM
 import pandas as pd
 
 from lib.data import SFDataset
+from lib.decorators import is_random
 from lib.utils import parse_yml_config
 
 
@@ -87,6 +88,7 @@ class SFModelGAM(SFModel):
         super().__init__(dataset, features, target)
         self.model = LogisticGAM()
 
+    @is_random
     def train(self):
         """
         Train a GAM model on the data
