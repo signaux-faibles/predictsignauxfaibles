@@ -99,5 +99,4 @@ urllib3==1.26.3
 wcwidth==0.2.5
 webencodings==0.5.1
 wrapt==1.12.1
-xgboost==1.0.2
 zipp==3.4.0
