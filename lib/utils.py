@@ -39,6 +39,7 @@ class MongoDBQuery:
         min_effectif: int,
         batch: str,
         sirets: List = None,
+        outcome: List = None,
     ):
         """
         Adds a match stage to the pipeline.
@@ -65,6 +66,9 @@ class MongoDBQuery:
 
         if sirets is not None:
             self.match_stage["$match"]["$and"].append({"_id.siret": {"$in": sirets}})
+
+        if outcome is not None:
+            self.match_stage["$match"]["$and"].append({"value.outcome": outcome})
 
         self.pipeline.append(self.match_stage)
 

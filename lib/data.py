@@ -18,6 +18,7 @@ class SFDataset:
         fields: which fields of the Features collection to retrieve. Default is all.
         sample_size: max number of (siret x period) rows to retrieve. Default is all.
         sirets: a list of SIRET to select.
+        outcome: restrict query to firms that fall in a specific outcome (True / False)
         batch_id : MongoDB batch id (defaults to your .env)
         min_effectif: min number of employees for firm to be in the sample (defaults to your .env)
 
@@ -32,6 +33,7 @@ class SFDataset:
         batch_id: str = "default",
         min_effectif: int = "default",
         sirets: List = None,
+        outcome: bool = None,
     ):
         self.__mongo_client = MongoClient(host=config.MONGODB_PARAMS.url)
         self.__mongo_database = self.__mongo_client.get_database(
@@ -50,6 +52,7 @@ class SFDataset:
             config.MIN_EFFECTIF if min_effectif == "default" else min_effectif
         )
         self.sirets = sirets
+        self.outcome = outcome
         self.mongo_pipeline = MongoDBQuery()
 
     @classmethod
@@ -88,6 +91,7 @@ class SFDataset:
             self.min_effectif,
             self.batch_id,
             sirets=self.sirets,
+            outcome=self.outcome,
         )
         self.mongo_pipeline.add_sort()
         self.mongo_pipeline.add_limit(self.sample_size)
