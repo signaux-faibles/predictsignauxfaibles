@@ -74,15 +74,17 @@ class SFDataset:
             batch_id=conf["batch_id"],
         )
 
-    def fetch_data(self):
+    def fetch_data(self, warn: bool = True):
         """
         Retrieve query from MongoDB database using the Aggregate framework
         Store the resulting data in the `data` attribute
+        Args:
+            warn : emmit a warning if fetch_data is overwriting some already existing data
         """
 
         self.mongo_pipeline.reset()
 
-        if self.data is not None:
+        if warn and self.data is not None:
             logging.warning("Dataset object was not empty. Overriding...")
 
         self.mongo_pipeline.add_standard_match(
@@ -181,18 +183,47 @@ Number of observations = {len(self) if isinstance(self.data, pd.DataFrame) else 
         """
         return len(self.data) if isinstance(self.data, pd.DataFrame) else 0
 
-    def __add__(self, other):
-        """
-        Adding two SFDataset objects together simply concatenates their data and returns
-        a new SFDataset object
-        """
-        new_dataset = SFDataset()
-        new_dataset.data = self.data.append(other.data).reset_index(drop=True)
-        return new_dataset
-
     @staticmethod
     def __cursor_to_df(cursor: Cursor):
         """
         Extract data from a MongoDB cursor into a Pandas dataframe
         """
         return pd.DataFrame(cursor)
+
+
+class OversampledSFDataset(SFDataset):
+    """
+    Helper class to oversample a SFDataset
+    Args:
+        proportion_positive_class: the desired proportion of firms for which outcome = True
+    """
+
+    def __init__(self, proportion_positive_class: float, **kwargs):
+        super().__init__(**kwargs)
+        assert (
+            0 <= proportion_positive_class <= 1
+        ), "proportion_positive_class must be between 0 and 1"
+        self.proportion_positive_class = proportion_positive_class
+
+    def fetch_data(self):  # pylint: disable=arguments-differ
+        """
+        Retrieve query from MongoDB database using the Aggregate framework
+        Store the resulting data in the `data` attribute
+        """
+        # compute the number of lines to fetch with outcome = True
+        n_obs_true = round(self.proportion_positive_class * self.sample_size)
+        n_obs_false = self.sample_size - n_obs_true
+
+        # fetch true
+        self.sample_size = n_obs_true
+        self.outcome = True
+        super().fetch_data(warn=False)
+        true_data = self.data
+
+        # fetch false
+        self.sample_size = n_obs_false
+        self.outcome = False
+        super().fetch_data(warn=False)
+        false_data = self.data
+        full_data = true_data.append(false_data)
+        self.data = full_data.reset_index(drop=True)
