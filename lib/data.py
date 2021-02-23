@@ -181,6 +181,15 @@ Number of observations = {len(self) if isinstance(self.data, pd.DataFrame) else 
         """
         return len(self.data) if isinstance(self.data, pd.DataFrame) else 0
 
+    def __add__(self, other):
+        """
+        Adding two SFDataset objects together simply concatenates their data and returns
+        a new SFDataset object
+        """
+        new_dataset = SFDataset()
+        new_dataset.data = self.data.append(other.data).reset_index(drop=True)
+        return new_dataset
+
     @staticmethod
     def __cursor_to_df(cursor: Cursor):
         """
