@@ -38,14 +38,14 @@ def test_full_drop_na(fake_testing_dataset):
     """
     must drop 11 (9 in my_feature, 2 other in time_til_outcome)
     """
-    fake_testing_dataset._remove_na(cols_defaults=[], cols_ignore_na=[])
+    fake_testing_dataset._remove_na(cols_ignore_na=[])
     assert len(fake_testing_dataset) == 9
     
 def test_part_drop_na(fake_testing_dataset):
     """
     must drop 9 (9 in my_feature, nothing from time_til_outcome, as the field is in cols_ignore_na)
     """
-    fake_testing_dataset._remove_na(cols_defaults=[], cols_ignore_na=["time_til_outcome"])
+    fake_testing_dataset._remove_na(cols_ignore_na=["time_til_outcome"])
     assert len(fake_testing_dataset) == 11
 
 def test_fill_defaults_and_drop_na(fake_testing_dataset):
