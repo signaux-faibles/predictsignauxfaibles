@@ -226,4 +226,4 @@ class OversampledSFDataset(SFDataset):
         super().fetch_data(warn=False)
         false_data = self.data
         full_data = true_data.append(false_data)
-        self.data = full_data.reset_index(drop=True)
+        self.data = full_data.sample(frac=1).reset_index(drop=True)
