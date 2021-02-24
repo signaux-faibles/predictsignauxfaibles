@@ -7,7 +7,7 @@ from pymongo.cursor import Cursor
 
 import config
 from lib.utils import MongoDBQuery, parse_yml_config
-
+from lib.decorators import is_random
 
 class SFDataset:
     """
@@ -205,6 +205,7 @@ class OversampledSFDataset(SFDataset):
         ), "proportion_positive_class must be between 0 and 1"
         self.proportion_positive_class = proportion_positive_class
 
+    @is_random
     def fetch_data(self):  # pylint: disable=arguments-differ
         """
         Retrieve query from MongoDB database using the Aggregate framework
