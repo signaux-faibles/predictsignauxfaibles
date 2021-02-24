@@ -112,8 +112,8 @@ class SFDataset:
     def prepare_data(
         self,
         remove_strong_signals: bool = False,
-        defaults_map: dict = config.DEFAULT_DATA_VALUES,
-        cols_ignore_na: list = config.IGNORE_NA,
+        defaults_map: dict = None,
+        cols_ignore_na: list = None,
     ):
         """
         Run data preparation operations on the dataset.
@@ -123,6 +123,12 @@ class SFDataset:
         assert isinstance(
             self.data, pd.DataFrame
         ), "DataFrame not found. Please fetch data first."
+
+        if defaults_map is None:
+            defaults_map = config.DEFAULT_DATA_VALUES
+
+        if cols_ignore_na is None:
+            cols_ignore_na = config.IGNORE_NA
 
         logging.info("Replacing missing data with default values")
         self._replace_missing_data(defaults_map)
@@ -148,14 +154,17 @@ class SFDataset:
 
         self.data = self.data[~(self.data["time_til_outcome"] <= 0)]
 
-    def _replace_missing_data(self, defaults_map: dict):
+    def _replace_missing_data(self, defaults_map: dict = None):
         """
         Replace missing data with defaults defined in project config
         Args:
             defaults_map: a dictionnary in the {column_name: default_value} format
         """
+        if defaults_map is None:
+            defaults_map = config.DEFAULT_DATA_VALUES
+
         logging.info(
-            "The following columns will have their missing values mapped to a default: {0:s}".format(
+            "The following columns will have their missing values mapped to a default: {0:s}".format(  # pylint: disable=C0301
                 ", ".join(list(set(defaults_map.keys())))
             )
         )
@@ -166,19 +175,17 @@ class SFDataset:
                 logging.debug(f"Column {column} not in dataset")
                 continue
 
-    def _remove_na(
-        self,
-        cols_ignore_na: list = config.IGNORE_NA,
-    ):
+    def _remove_na(self, cols_ignore_na: list = None):
         """
         Remove all observations with missing values.
         """
-        cols_drop_na = set(self.data.columns).difference(
-            set(cols_ignore_na)
-        )
-        
+        if cols_ignore_na is None:
+            cols_ignore_na = config.IGNORE_NA
+
+        cols_drop_na = set(self.data.columns).difference(set(cols_ignore_na))
+
         logging.info(
-            "Removing NAs from dataset.\nNAs in the following fields will be ignored instead of dropped: {0:s}\nThe following fields will be dropped if NA is found, unless default values were specified: {1:s}".format(
+            "Removing NAs from dataset.\nNAs in the following fields will be ignored instead of dropped: {0:s}\nThe following fields will be dropped if NA is found, unless default values were specified: {1:s}".format(  # pylint: disable=C0301,C0303
                 ", ".join(cols_ignore_na),
                 ", ".join(cols_drop_na),
             )
