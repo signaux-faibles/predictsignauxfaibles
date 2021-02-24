@@ -128,8 +128,7 @@ class SFDataset:
         self._replace_missing_data(defaults_map)
 
         logging.info("Drop observations with missing required fields.")
-        cols_defaults = list(defaults_map.keys())
-        self._remove_na(cols_defaults, cols_ignore_na)
+        self._remove_na(cols_ignore_na)
 
         if remove_strong_signals:
             logging.info("Removing 'strong signals'.")
@@ -155,6 +154,11 @@ class SFDataset:
         Args:
             defaults_map: a dictionnary in the {column_name: default_value} format
         """
+        logging.info(
+            "The following columns will have their missing values mapped to a default: {0:s}".format(
+                ", ".join(list(set(defaults_map.keys())))
+            )
+        )
         for column in defaults_map:
             try:
                 self.data[column] = self.data[column].fillna(defaults_map.get(column))
@@ -164,21 +168,19 @@ class SFDataset:
 
     def _remove_na(
         self,
-        cols_defaults: list = list(config.DEFAULT_DATA_VALUES.keys()),
         cols_ignore_na: list = config.IGNORE_NA,
     ):
         """
         Remove all observations with missing values.
         """
         cols_drop_na = set(self.data.columns).difference(
-            set(cols_defaults + cols_ignore_na)
+            set(cols_ignore_na)
         )
         
         logging.info(
-            "Removing NAs from dataset.\nNAs in the following fields will be ignored instead of dropped: {0:s}\nThe following fields will be dropped if NA is found: {1:s}\nThe following fields have a default value filled in when a NA is found: {2:s}".format(
+            "Removing NAs from dataset.\nNAs in the following fields will be ignored instead of dropped: {0:s}\nThe following fields will be dropped if NA is found, unless default values were specified: {1:s}".format(
                 ", ".join(cols_ignore_na),
                 ", ".join(cols_drop_na),
-                ", ".join(cols_defaults)
             )
         )
         logging.info(f"Number of observations before: {len(self.data.index)}")
