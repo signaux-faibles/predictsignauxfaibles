@@ -9,6 +9,7 @@ import config
 from lib.utils import MongoDBQuery, parse_yml_config
 from lib.decorators import is_random
 
+
 class SFDataset:
     """
     Retrieve a signaux faibles dataset.
@@ -105,10 +106,15 @@ class SFDataset:
         cursor = self.__mongo_collection.aggregate(self.mongo_pipeline.to_pipeline())
 
         self.data = self.__cursor_to_df(cursor)
-        
+
         return self
 
-    def prepare_data(self, remove_strong_signals: bool = False, defaults_map: dict = config.DEFAULT_DATA_VALUES, cols_ignore_na: list = config.IGNORE_NA):
+    def prepare_data(
+        self,
+        remove_strong_signals: bool = False,
+        defaults_map: dict = config.DEFAULT_DATA_VALUES,
+        cols_ignore_na: list = config.IGNORE_NA,
+    ):
         """
         Run data preparation operations on the dataset.
         remove_strong_signals drops observations with time_til_outcome <= 0
@@ -120,11 +126,11 @@ class SFDataset:
 
         logging.info("Replacing missing data with default values")
         self._replace_missing_data(defaults_map)
-        
+
         logging.info("Drop observations with missing required fields.")
         cols_defaults = list(defaults_map.keys())
         self._remove_na(cols_defaults, cols_ignore_na)
-        
+
         if remove_strong_signals:
             logging.info("Removing 'strong signals'.")
             self._remove_strong_signals()
@@ -156,16 +162,27 @@ class SFDataset:
                 logging.debug(f"Column {column} not in dataset")
                 continue
 
-    def _remove_na(self, cols_defaults: list = list(config.DEFAULT_DATA_VALUES.keys()), cols_ignore_na: list = config.IGNORE_NA):
+    def _remove_na(
+        self,
+        cols_defaults: list = list(config.DEFAULT_DATA_VALUES.keys()),
+        cols_ignore_na: list = config.IGNORE_NA,
+    ):
         """
         Remove all observations with missing values.
         """
-        logging.info("Removing NAs from dataset. NAs in the following fields will be ignored instead of dropped: {:s}".format(', '.join(cols_ignore_na)))
-        logging.info(f"Number of observations before: {len(self.data.index)}")
         cols_drop_na = set(self.data.columns).difference(
             set(cols_defaults + cols_ignore_na)
         )
-        self.data.dropna(subset=cols_drop_na ,inplace=True)
+        
+        logging.info(
+            "Removing NAs from dataset.\nNAs in the following fields will be ignored instead of dropped: {0:s}\nThe following fields will be dropped if NA is found: {1:s}\nThe following fields have a default value filled in when a NA is found: {2:s}".format(
+                ", ".join(cols_ignore_na),
+                ", ".join(cols_drop_na),
+                ", ".join(cols_defaults)
+            )
+        )
+        logging.info(f"Number of observations before: {len(self.data.index)}")
+        self.data.dropna(subset=cols_drop_na, inplace=True)
         logging.info(f"Number of observations after: {len(self.data.index)}")
 
     def __repr__(self):
