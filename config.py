@@ -47,6 +47,11 @@ DEFAULT_DATA_VALUES = {
     "tag_outcome": False,
 }
 
+# Columns for which NA should be ignored
+IGNORE_NA = [
+    "time_til_outcome"
+]
+
 # JSONschema schema used to validate config files
 CONFIG_FILE_SCHEMA = {
     "type": "object",
