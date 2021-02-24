@@ -7,7 +7,7 @@ from pymongo.cursor import Cursor
 
 import config
 from lib.utils import MongoDBQuery, parse_yml_config
-
+from lib.decorators import is_random
 
 class SFDataset:
     """
@@ -18,6 +18,7 @@ class SFDataset:
         fields: which fields of the Features collection to retrieve. Default is all.
         sample_size: max number of (siret x period) rows to retrieve. Default is all.
         sirets: a list of SIRET to select.
+        outcome: restrict query to firms that fall in a specific outcome (True / False)
         batch_id : MongoDB batch id (defaults to your .env)
         min_effectif: min number of employees for firm to be in the sample (defaults to your .env)
 
@@ -32,6 +33,7 @@ class SFDataset:
         batch_id: str = "default",
         min_effectif: int = "default",
         sirets: List = None,
+        outcome: bool = None,
     ):
         self.__mongo_client = MongoClient(host=config.MONGODB_PARAMS.url)
         self.__mongo_database = self.__mongo_client.get_database(
@@ -50,6 +52,7 @@ class SFDataset:
             config.MIN_EFFECTIF if min_effectif == "default" else min_effectif
         )
         self.sirets = sirets
+        self.outcome = outcome
         self.mongo_pipeline = MongoDBQuery()
 
     @classmethod
@@ -71,15 +74,17 @@ class SFDataset:
             batch_id=conf["batch_id"],
         )
 
-    def fetch_data(self):
+    def fetch_data(self, warn: bool = True):
         """
         Retrieve query from MongoDB database using the Aggregate framework
         Store the resulting data in the `data` attribute
+        Args:
+            warn : emmit a warning if fetch_data is overwriting some already existing data
         """
 
         self.mongo_pipeline.reset()
 
-        if self.data is not None:
+        if warn and self.data is not None:
             logging.warning("Dataset object was not empty. Overriding...")
 
         self.mongo_pipeline.add_standard_match(
@@ -88,6 +93,7 @@ class SFDataset:
             self.min_effectif,
             self.batch_id,
             sirets=self.sirets,
+            outcome=self.outcome,
         )
         self.mongo_pipeline.add_sort()
         self.mongo_pipeline.add_limit(self.sample_size)
@@ -183,3 +189,42 @@ Number of observations = {len(self) if isinstance(self.data, pd.DataFrame) else 
         Extract data from a MongoDB cursor into a Pandas dataframe
         """
         return pd.DataFrame(cursor)
+
+
+class OversampledSFDataset(SFDataset):
+    """
+    Helper class to oversample a SFDataset
+    Args:
+        proportion_positive_class: the desired proportion of firms for which outcome = True
+    """
+
+    def __init__(self, proportion_positive_class: float, **kwargs):
+        super().__init__(**kwargs)
+        assert (
+            0 <= proportion_positive_class <= 1
+        ), "proportion_positive_class must be between 0 and 1"
+        self.proportion_positive_class = proportion_positive_class
+
+    @is_random
+    def fetch_data(self):  # pylint: disable=arguments-differ
+        """
+        Retrieve query from MongoDB database using the Aggregate framework
+        Store the resulting data in the `data` attribute
+        """
+        # compute the number of lines to fetch with outcome = True
+        n_obs_true = round(self.proportion_positive_class * self.sample_size)
+        n_obs_false = self.sample_size - n_obs_true
+
+        # fetch true
+        self.sample_size = n_obs_true
+        self.outcome = True
+        super().fetch_data(warn=False)
+        true_data = self.data
+
+        # fetch false
+        self.sample_size = n_obs_false
+        self.outcome = False
+        super().fetch_data(warn=False)
+        false_data = self.data
+        full_data = true_data.append(false_data)
+        self.data = full_data.sample(frac=1).reset_index(drop=True)
