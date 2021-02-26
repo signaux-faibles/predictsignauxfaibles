@@ -129,3 +129,7 @@ dmypy.json
 
 # ignore notebooks prefaced with "dev"
 notebooks/dev-*
+
+# ignore documentation file of variables
+variables.json
+
