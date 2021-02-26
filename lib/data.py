@@ -9,6 +9,7 @@ import config
 from lib.utils import MongoDBQuery, parse_yml_config
 from lib.decorators import is_random
 
+
 class SFDataset:
     """
     Retrieve a signaux faibles dataset.
@@ -105,9 +106,15 @@ class SFDataset:
         cursor = self.__mongo_collection.aggregate(self.mongo_pipeline.to_pipeline())
 
         self.data = self.__cursor_to_df(cursor)
+
         return self
 
-    def prepare_data(self, remove_strong_signals: bool = False):
+    def prepare_data(
+        self,
+        remove_strong_signals: bool = False,
+        defaults_map: dict = None,
+        cols_ignore_na: list = None,
+    ):
         """
         Run data preparation operations on the dataset.
         remove_strong_signals drops observations with time_til_outcome <= 0
@@ -117,11 +124,17 @@ class SFDataset:
             self.data, pd.DataFrame
         ), "DataFrame not found. Please fetch data first."
 
+        if defaults_map is None:
+            defaults_map = config.DEFAULT_DATA_VALUES
+
+        if cols_ignore_na is None:
+            cols_ignore_na = config.IGNORE_NA
+
         logging.info("Replacing missing data with default values")
-        self._replace_missing_data(defaults_map=config.DEFAULT_DATA_VALUES)
+        self._replace_missing_data(defaults_map)
 
         logging.info("Drop observations with missing required fields.")
-        self._remove_na()
+        self._remove_na(cols_ignore_na)
 
         if remove_strong_signals:
             logging.info("Removing 'strong signals'.")
@@ -141,12 +154,18 @@ class SFDataset:
 
         self.data = self.data[~(self.data["time_til_outcome"] <= 0)]
 
-    def _replace_missing_data(self, defaults_map: dict):
+    def _replace_missing_data(self, defaults_map: dict = None):
         """
         Replace missing data with defaults defined in project config
         Args:
             defaults_map: a dictionnary in the {column_name: default_value} format
         """
+        if defaults_map is None:
+            defaults_map = config.DEFAULT_DATA_VALUES
+
+        for feature, default_value in defaults_map.items():
+            logging.debug(f"Column {feature} defaulting to value {default_value}")
+
         for column in defaults_map:
             try:
                 self.data[column] = self.data[column].fillna(defaults_map.get(column))
@@ -154,13 +173,24 @@ class SFDataset:
                 logging.debug(f"Column {column} not in dataset")
                 continue
 
-    def _remove_na(self):
+    def _remove_na(self, cols_ignore_na: list):
         """
         Remove all observations with missing values.
         """
+
+        cols_drop_na = set(self.data.columns).difference(set(cols_ignore_na))
+
         logging.info("Removing NAs from dataset.")
+        for feature in cols_drop_na:
+            logging.debug(
+                f"Rows with NAs in field {feature} will be dropped, unless default val is provided"
+            )
+
+        for feature in cols_ignore_na:
+            logging.debug(f"Rows with NAs in field {feature} will NOT be dropped")
+
         logging.info(f"Number of observations before: {len(self.data.index)}")
-        self.data.dropna(inplace=True)
+        self.data.dropna(subset=cols_drop_na, inplace=True)
         logging.info(f"Number of observations after: {len(self.data.index)}")
 
     def __repr__(self):
