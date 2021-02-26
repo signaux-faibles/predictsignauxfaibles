@@ -173,7 +173,7 @@ class SFDataset:
                 logging.debug(f"Column {column} not in dataset")
                 continue
 
-    def _remove_na(self, cols_ignore_na):
+    def _remove_na(self, cols_ignore_na: list):
         """
         Remove all observations with missing values.
         """
