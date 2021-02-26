@@ -163,11 +163,9 @@ class SFDataset:
         if defaults_map is None:
             defaults_map = config.DEFAULT_DATA_VALUES
 
-        logging.info(
-            "The following columns will have their missing values mapped to a default: {0:s}".format(  # pylint: disable=C0301
-                ", ".join(list(set(defaults_map.keys())))
-            )
-        )
+        for feature, default_value in defaults_map.items():
+            logging.debug(f"Column {feature} defaulting to value {default_value}")
+
         for column in defaults_map:
             try:
                 self.data[column] = self.data[column].fillna(defaults_map.get(column))
@@ -175,21 +173,22 @@ class SFDataset:
                 logging.debug(f"Column {column} not in dataset")
                 continue
 
-    def _remove_na(self, cols_ignore_na: list = None):
+    def _remove_na(self, cols_ignore_na):
         """
         Remove all observations with missing values.
         """
-        if cols_ignore_na is None:
-            cols_ignore_na = config.IGNORE_NA
 
         cols_drop_na = set(self.data.columns).difference(set(cols_ignore_na))
 
-        logging.info(
-            "Removing NAs from dataset.\nNAs in the following fields will be ignored instead of dropped: {0:s}\nThe following fields will be dropped if NA is found, unless default values were specified: {1:s}".format(  # pylint: disable=C0301,C0303
-                ", ".join(cols_ignore_na),
-                ", ".join(cols_drop_na),
+        logging.info("Removing NAs from dataset.")
+        for feature in cols_drop_na:
+            logging.debug(
+                f"Rows with NAs in field {feature} will be dropped, unless default val is provided"
             )
-        )
+
+        for feature in cols_ignore_na:
+            logging.debug(f"Rows with NAs in field {feature} will NOT be dropped")
+
         logging.info(f"Number of observations before: {len(self.data.index)}")
         self.data.dropna(subset=cols_drop_na, inplace=True)
         logging.info(f"Number of observations after: {len(self.data.index)}")
