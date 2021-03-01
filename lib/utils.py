@@ -39,6 +39,7 @@ class MongoDBQuery:
         min_effectif: int,
         batch: str,
         sirets: List = None,
+        sirens: List = None,
         outcome: List = None,
     ):
         """
@@ -66,6 +67,9 @@ class MongoDBQuery:
 
         if sirets is not None:
             self.match_stage["$match"]["$and"].append({"_id.siret": {"$in": sirets}})
+
+        if sirens is not None:
+            self.match_stage["$match"]["$and"].append({"value.siren": {"$in": sirens}})
 
         if outcome is not None:
             self.match_stage["$match"]["$and"].append({"value.outcome": outcome})
