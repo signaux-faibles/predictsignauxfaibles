@@ -45,9 +45,6 @@ pyenv virtualenv 3.6.4 sf
 pyenv local sf
 ```
 
-Note: sur le serveur, utiliser l'instalation par défaut de python (pour l'instant). Cf: [cette issue](https://github.com/signaux-faibles/predictsignauxfaibles/issues/20)
-
-
 ### installer les dépendences du projet
 ```
 pip install -r requirements.txt
