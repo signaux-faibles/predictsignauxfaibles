@@ -2,7 +2,7 @@
 from jsonschema import ValidationError
 import pytest
 
-from lib.utils import MongoDBQuery, parse_yml_config, ConfigFileError
+from predictsignauxfaibles.utils import MongoDBQuery, parse_yml_config, ConfigFileError
 
 
 def test_empty_pipeline():

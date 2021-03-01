@@ -5,9 +5,9 @@ from typing import List
 from pygam import LogisticGAM
 import pandas as pd
 
-from lib.data import SFDataset
-from lib.decorators import is_random
-from lib.utils import parse_yml_config
+from predictsignauxfaibles.data import SFDataset
+from predictsignauxfaibles.decorators import is_random
+from predictsignauxfaibles.utils import parse_yml_config
 
 
 class SFModel(ABC):

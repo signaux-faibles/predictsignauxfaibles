@@ -2,7 +2,7 @@ import os
 
 from dotenv import load_dotenv, find_dotenv
 
-from lib.utils import MongoParams
+from predictsignauxfaibles.utils import MongoParams
 
 # find .env automagically by walking up directories until it's found
 dotenv_path = find_dotenv()

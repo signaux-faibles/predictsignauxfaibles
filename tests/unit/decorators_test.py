@@ -3,7 +3,9 @@ import os
 from random import randint
 
 os.environ["RANDOM_SEED"] = "42"  # Manually set env var for testing
-from lib.decorators import is_random  # pylint: disable=wrong-import-position
+from predictsignauxfaibles.decorators import (
+    is_random,
+)  # pylint: disable=wrong-import-position
 
 
 def test_is_random_seeded():

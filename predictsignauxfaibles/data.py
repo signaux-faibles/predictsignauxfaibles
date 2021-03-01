@@ -6,8 +6,8 @@ from pymongo import MongoClient
 from pymongo.cursor import Cursor
 
 import config
-from lib.utils import MongoDBQuery, parse_yml_config
-from lib.decorators import is_random
+from predictsignauxfaibles.utils import MongoDBQuery, parse_yml_config
+from predictsignauxfaibles.decorators import is_random
 
 
 class SFDataset:
