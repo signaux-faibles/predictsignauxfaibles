@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 
 from predictsignauxfaibles.data import SFDataset
-import config
+import predictsignauxfaibles.config as config
 
 
 def test_dataset_init_default_batch_id():
