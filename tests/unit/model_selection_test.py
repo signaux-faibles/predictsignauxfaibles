@@ -5,7 +5,7 @@ import random
 import pandas as pd
 import pytest
 
-from lib.model_selection import make_sf_test_validate_splits
+from predictsignauxfaibles.model_selection import make_sf_test_validate_splits
 
 random.seed(19)
 

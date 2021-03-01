@@ -5,7 +5,7 @@ import random
 import pandas as pd
 import pytest
 
-from lib.data import SFDataset
+from predictsignauxfaibles.data import SFDataset
 import config
 
 
