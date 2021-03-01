@@ -5,7 +5,7 @@ import pandas as pd
 from pymongo import MongoClient
 from pymongo.cursor import Cursor
 
-import config
+import predictsignauxfaibles.config as config
 from predictsignauxfaibles.utils import MongoDBQuery, parse_yml_config
 from predictsignauxfaibles.decorators import is_random
 
