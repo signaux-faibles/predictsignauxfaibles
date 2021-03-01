@@ -11,8 +11,31 @@ Dépôt du code python permettant la production de liste de prédiction Signaux 
 ### Cloner et naviguer dans le repo
 ```
 git clone git@github.com:signaux-faibles/predictsignauxfaibles.git
-cd predictsignauxfaibles
+
 ```
+### Optionnel : Pour les personnes qui travaillent sur le serveur labtenant avec un proxy  
+
+Pour pouvoir télécharger les packages, leurs dépendances ainsi que la documentation de données de opensignauxfaibles, il est nécessaire de prendre en compte le proxy pour les personnes qui travaillent sur le serveur. 
+
+Par exemple, pour installer un package : 
+
+```
+pip install --proxy socks5h://localhost:<PORT_INTERNET> <MON_PACKAGE>
+```
+Pour éviter de fournir l'option --proxy à chaque fois, vous pouvez créer un fichier ~/.conf/pip/pip.conf 
+
+```
+mkdir ~/.conf
+mkdir ~/.conf/pip
+nano pip.conf
+```
+Et y ajouter la configuration suivante :
+
+```
+[global]
+proxy = socks5h://localhost:<PORT_INTERNET>
+```
+Cette configuration est cruciale pour l'installation automatique des packages indiqué dans requirements.  
 
 ### créer un environnement virtuel python (recommandé)
 exemple avec [pyenv](https://github.com/pyenv/pyenv):
@@ -21,9 +44,6 @@ pyenv install 3.6.4
 pyenv virtualenv 3.6.4 sf
 pyenv local sf
 ```
-
-Note: sur le serveur, utiliser l'instalation par défaut de python (pour l'instant). Cf: [cette issue](https://github.com/signaux-faibles/predictsignauxfaibles/issues/20)
-
 
 ### installer les dépendences du projet
 ```
@@ -56,6 +76,15 @@ Commencer à travailler !
 ## Documentation
 
 Un notebook jupyter interactif de démo est disponible [ici](./notebooks/00-get_started.ipynb).
+
+Il est également possible de télécharger le listing des features disponibles pour le modèle Signaux Faibles, fichier json présent dans le dépôt Github opensignauxfaibles. Ce listing est utilisé dans le notebook de démo. 
+
+```
+cd notebooks
+curl --proxy socks5h://localhost:<PORT_INTERNET> -OL https://raw.githubusercontent.com/signaux-faibles/opensignauxfaibles/master/js/reduce.algo2/docs/variables.json -o variables.json
+cd ..
+```
+
 
 ## Gestion des fonctions aléatoires
 
