@@ -34,6 +34,7 @@ class SFDataset:
         batch_id: str = "default",
         min_effectif: int = "default",
         sirets: List = None,
+        sirens: List = None,
         outcome: bool = None,
     ):
         self.__mongo_client = MongoClient(host=config.MONGODB_PARAMS.url)
@@ -53,6 +54,7 @@ class SFDataset:
             config.MIN_EFFECTIF if min_effectif == "default" else min_effectif
         )
         self.sirets = sirets
+        self.sirens = sirens
         self.outcome = outcome
         self.mongo_pipeline = MongoDBQuery()
 
@@ -94,6 +96,7 @@ class SFDataset:
             self.min_effectif,
             self.batch_id,
             sirets=self.sirets,
+            sirens=self.sirens,
             outcome=self.outcome,
         )
         self.mongo_pipeline.add_sort()
