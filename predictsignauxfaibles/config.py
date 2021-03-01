@@ -49,34 +49,3 @@ DEFAULT_DATA_VALUES = {
 
 # Columns for which NA should be ignored
 IGNORE_NA = ["time_til_outcome"]
-
-# JSONschema schema used to validate config files
-CONFIG_FILE_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "name": {"type": "string"},
-        "version": {"type": "string"},
-        "target": {"type": "string"},
-        "features": {"type": "array"},
-        "batch_id": {"type": "string"},
-        "train_on": {
-            "type": "object",
-            "properties": {
-                "start_date": {"type": "string"},
-                "end_date": {"type": "string"},
-                "sample_size": {"type": "integer"},
-            },
-            "required": ["start_date", "end_date", "sample_size"],
-        },
-        "predict_on": {"type": "string"},
-    },
-    "required": [
-        "name",
-        "version",
-        "target",
-        "features",
-        "batch_id",
-        "train_on",
-        "predict_on",
-    ],
-}
