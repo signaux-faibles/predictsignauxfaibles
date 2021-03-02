@@ -6,8 +6,6 @@ import jsonschema
 import pytz
 import yaml
 
-import config
-
 
 class MongoParams(NamedTuple):
     """
@@ -146,8 +144,40 @@ def parse_yml_config(path: str):
     if parsed_path.suffix != ".yml":
         raise ConfigFileError("config file must be a .yml file")
     data = yaml.load(parsed_path.read_bytes(), Loader=yaml.Loader)
-    jsonschema.validate(data, config.CONFIG_FILE_SCHEMA)
+    jsonschema.validate(data, CONFIG_FILE_SCHEMA)
     return data
+
+
+# JSONschema schema used to validate config files
+CONFIG_FILE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "name": {"type": "string"},
+        "version": {"type": "string"},
+        "target": {"type": "string"},
+        "features": {"type": "array"},
+        "batch_id": {"type": "string"},
+        "train_on": {
+            "type": "object",
+            "properties": {
+                "start_date": {"type": "string"},
+                "end_date": {"type": "string"},
+                "sample_size": {"type": "integer"},
+            },
+            "required": ["start_date", "end_date", "sample_size"],
+        },
+        "predict_on": {"type": "string"},
+    },
+    "required": [
+        "name",
+        "version",
+        "target",
+        "features",
+        "batch_id",
+        "train_on",
+        "predict_on",
+    ],
+}
 
 
 class ConfigFileError(Exception):

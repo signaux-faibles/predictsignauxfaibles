@@ -4,9 +4,9 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import average_precision_score
 
-from lib.data import SFDataset
-from lib.decorators import is_random
-from lib.models import SFModel
+from predictsignauxfaibles.data import SFDataset
+from predictsignauxfaibles.decorators import is_random
+from predictsignauxfaibles.models import SFModel
 
 
 class SFModelEvaluator:
