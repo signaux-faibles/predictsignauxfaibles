@@ -5,8 +5,8 @@ import random
 import pandas as pd
 import pytest
 
-from lib.data import SFDataset
-import config
+from predictsignauxfaibles.data import SFDataset
+import predictsignauxfaibles.config as config
 
 
 def test_dataset_init_default_batch_id():
