@@ -39,6 +39,13 @@ def test_no_siren_overlap(fake_dataframes):
             fake_dataframes[1].iloc[split["validate_on"]].siren
         )
 
+def test_validationset_no_overlap_acrossfolds(fake_dataframes):
+    splits = make_sf_test_validate_splits(
+        fake_dataframes[0], fake_dataframes[1], num_folds=4
+    )
+    for fold_id1 in range(4):
+        for fold_id2 in range(fold_id1+1,4):
+            assert(set(folds_dict[fold_id1]["validate_on"]).isdisjoint(set(folds_dict[fold_id2]["validate_on"])))
 
 @pytest.mark.parametrize("n_folds", [1, 2, 15, 100])
 def test_splits_for_different_values(fake_dataframes, n_folds):
