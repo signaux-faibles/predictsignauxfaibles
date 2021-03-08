@@ -11,7 +11,6 @@ features:
   - ratio_dette
   - ratio_dette_moy12m
   - exportation_past_2
-batch_id: "2009_5"
 train_on:
   start_date: "2015-01-01"
   end_date: "2018-06-30"
