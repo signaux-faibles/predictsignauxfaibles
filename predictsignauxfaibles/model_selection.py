@@ -107,8 +107,8 @@ def make_sf_test_validate_splits(
     # Generate output
     out = {}
     for i, siren in enumerate(siren_splits_train):
-        out[i] = {"train_on": train_data[train_data["siren"].isin(siren)].index}
-        out[i]["validate_on"] = validate_data[~validate_data["siren"].isin(siren)].index
+        out[i] = {"train_on": train_data[~train_data["siren"].isin(siren)].index}
+        out[i]["validate_on"] = validate_data[validate_data["siren"].isin(siren)].index
         # TODO: remove "signaux-forts" from validate_on
 
     return out
