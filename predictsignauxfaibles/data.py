@@ -55,6 +55,25 @@ class SFDataset:
         self.outcome = outcome
         self.mongo_pipeline = MongoDBQuery()
 
+    def _connect_to_mongo(self):
+        if self.__mongo_client is None:
+            logging.debug("opening connection")
+            self.__mongo_client = MongoClient(host=config.MONGODB_PARAMS.url)
+            self.__mongo_database = self.__mongo_client.get_database(
+                config.MONGODB_PARAMS.db
+            )
+            self.__mongo_collection = self.__mongo_database.get_collection(
+                config.MONGODB_PARAMS.collection
+            )
+
+    def _disconnect_from_mongo(self):
+        if self.__mongo_client is not None:
+            logging.debug("closing connection")
+            self.__mongo_client.close()
+            self.__mongo_client = None
+            self.__mongo_database = None
+            self.__mongo_collection = None
+
     @classmethod
     def from_config_file(cls, path: str, mode: str = "train"):
         """
@@ -101,9 +120,11 @@ class SFDataset:
         if self.fields is not None:
             self.mongo_pipeline.add_projection(self.fields)
 
+        self._connect_to_mongo()
         cursor = self.__mongo_collection.aggregate(self.mongo_pipeline.to_pipeline())
 
         self.data = self.__cursor_to_df(cursor)
+        self._disconnect_from_mongo()
 
         return self
 
