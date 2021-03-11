@@ -1,7 +1,6 @@
 ---
 version: 1.0.0
 target: outcome
-batch_id: "2009_5"
 train_on:
   start_date: "2015-01-01"
   end_date: "2018-06-30"

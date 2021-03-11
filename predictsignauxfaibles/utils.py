@@ -35,7 +35,6 @@ class MongoDBQuery:
         date_min: str,
         date_max: str,
         min_effectif: int,
-        batch: str,
         sirets: List = None,
         sirens: List = None,
         outcome: List = None,
@@ -46,12 +45,10 @@ class MongoDBQuery:
             date_min: first period to include, in the 'YYYY-MM-DD' format
             date_max: first period to exclude, in the 'YYYY-MM-DD' format
             min_effectif: the minimum number of employees a firm must have to be included
-            batch: batch_id of the dataset to retrieve
         """
         self.match_stage = {
             "$match": {
                 "$and": [
-                    {"_id.batch": batch},
                     {
                         "_id.periode": {
                             "$gte": self.__date_to_iso(date_min),
@@ -71,6 +68,10 @@ class MongoDBQuery:
 
         if outcome is not None:
             self.match_stage["$match"]["$and"].append({"value.outcome": outcome})
+        else:
+            self.match_stage["$match"]["$and"].append(
+                {"value.outcome": {"$in": [True, False]}}
+            )
 
         self.pipeline.append(self.match_stage)
 
@@ -156,7 +157,6 @@ CONFIG_FILE_SCHEMA = {
         "version": {"type": "string"},
         "target": {"type": "string"},
         "features": {"type": "array"},
-        "batch_id": {"type": "string"},
         "train_on": {
             "type": "object",
             "properties": {
@@ -173,7 +173,6 @@ CONFIG_FILE_SCHEMA = {
         "version",
         "target",
         "features",
-        "batch_id",
         "train_on",
         "predict_on",
     ],

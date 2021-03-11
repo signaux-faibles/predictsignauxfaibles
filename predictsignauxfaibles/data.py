@@ -20,7 +20,6 @@ class SFDataset:
         sample_size: max number of (siret x period) rows to retrieve. Default is all.
         sirets: a list of SIRET to select.
         outcome: restrict query to firms that fall in a specific outcome (True / False)
-        batch_id : MongoDB batch id (defaults to your .env)
         min_effectif: min number of employees for firm to be in the sample (defaults to your .env)
 
     """
@@ -31,7 +30,6 @@ class SFDataset:
         date_max: str = "3000-01-01",
         fields: List = None,
         sample_size: int = 0,  # a sample size of 0 means all data is retrieved
-        batch_id: str = "default",
         min_effectif: int = "default",
         sirets: List = None,
         sirens: List = None,
@@ -49,7 +47,6 @@ class SFDataset:
         self.date_max = date_max
         self.fields = fields
         self.sample_size = sample_size
-        self.batch_id = config.BATCH_ID if batch_id == "default" else batch_id
         self.min_effectif = (
             config.MIN_EFFECTIF if min_effectif == "default" else min_effectif
         )
@@ -74,7 +71,6 @@ class SFDataset:
             date_max=conf[f"{mode}_on"]["end_date"],
             fields=conf["features"] + [conf["target"]] + ["siret", "periode"],
             sample_size=conf[f"{mode}_on"].get("sample_size", 0),
-            batch_id=conf["batch_id"],
         )
 
     def fetch_data(self, warn: bool = True):
@@ -94,7 +90,6 @@ class SFDataset:
             self.date_min,
             self.date_max,
             self.min_effectif,
-            self.batch_id,
             sirets=self.sirets,
             sirens=self.sirens,
             outcome=self.outcome,
@@ -198,7 +193,7 @@ class SFDataset:
 
     def __repr__(self):
         out = f"""
-Signaux Faibles Dataset (batch_id : {self.batch_id})
+Signaux Faibles Dataset
 ----------------------------------------------------
 {self.data.head() if isinstance(self.data, pd.DataFrame) else "Empty Dataset"}
 [...]
