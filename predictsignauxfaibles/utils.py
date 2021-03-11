@@ -68,6 +68,10 @@ class MongoDBQuery:
 
         if outcome is not None:
             self.match_stage["$match"]["$and"].append({"value.outcome": outcome})
+        else:
+            self.match_stage["$match"]["$and"].append(
+                {"value.outcome": {"$in": [True, False]}}
+            )
 
         self.pipeline.append(self.match_stage)
 
