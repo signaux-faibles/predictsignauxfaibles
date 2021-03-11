@@ -17,7 +17,6 @@ def test_match_pipeline():
         date_min="1999-12-13",
         date_max="2021-12-10",
         min_effectif=10,
-        batch="2012",
         sirets=["123456789", "123451234"],
     )
     pipeline = query.to_pipeline()
@@ -31,7 +30,6 @@ def test_full_query():
         date_min="1999-12-13",
         date_max="2021-12-10",
         min_effectif=10,
-        batch="2012",
         sirets=["123456789", "123451234"],
     )
     query.add_sort()
