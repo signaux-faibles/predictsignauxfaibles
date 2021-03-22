@@ -2,12 +2,16 @@ import logging
 from typing import List
 
 import pandas as pd
-from pymongo import MongoClient
+from pymongo import MongoClient, monitoring
 from pymongo.cursor import Cursor
 
 import predictsignauxfaibles.config as config
+from predictsignauxfaibles.logging import CommandLogger
 from predictsignauxfaibles.utils import MongoDBQuery, parse_yml_config
 from predictsignauxfaibles.decorators import is_random
+
+
+monitoring.register(CommandLogger())  # loglevel is debug
 
 
 class SFDataset:
@@ -120,17 +124,24 @@ class SFDataset:
         if self.fields is not None:
             self.mongo_pipeline.add_projection(self.fields)
 
+        logging.debug(f"MongoDB Aggregate query: {self.mongo_pipeline.to_pipeline()}")
+
         try:
             self._connect_to_mongo()
             cursor = self.__mongo_collection.aggregate(
                 self.mongo_pipeline.to_pipeline()
             )
-
-            self.data = self.__cursor_to_df(cursor)
         except Exception as exception:  # pylint: disable=broad-except
             raise exception
         finally:
             self._disconnect_from_mongo()
+
+        try:
+            self.data = self.__cursor_to_df(cursor)
+        except Exception as exception:
+            raise exception
+        finally:
+            cursor.close()
 
         return self
 
