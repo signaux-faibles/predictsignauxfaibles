@@ -96,18 +96,11 @@ class SFDataset:
             sample_size=conf[f"{mode}_on"].get("sample_size", 0),
         )
 
-    def fetch_data(self, warn: bool = True):
+    def _make_pipeline(self):
         """
-        Retrieve query from MongoDB database using the Aggregate framework
-        Store the resulting data in the `data` attribute
-        Args:
-            warn : emmit a warning if fetch_data is overwriting some already existing data
+        Build Mongo Aggregate pipeline for dataset and store it in the `mongo_pipeline` attribute
         """
-
         self.mongo_pipeline.reset()
-
-        if warn and self.data is not None:
-            logging.warning("Dataset object was not empty. Overriding...")
 
         self.mongo_pipeline.add_standard_match(
             self.date_min,
@@ -125,6 +118,18 @@ class SFDataset:
             self.mongo_pipeline.add_projection(self.fields)
 
         logging.debug(f"MongoDB Aggregate query: {self.mongo_pipeline.to_pipeline()}")
+
+    def fetch_data(self, warn: bool = True):
+        """
+        Retrieve query from MongoDB database using the Aggregate framework
+        Store the resulting data in the `data` attribute
+        Args:
+            warn : emmit a warning if fetch_data is overwriting some already existing data
+        """
+        self._make_pipeline()
+
+        if warn and self.data is not None:
+            logging.warning("Dataset object was not empty. Overriding...")
 
         try:
             self._connect_to_mongo()
@@ -144,6 +149,18 @@ class SFDataset:
             cursor.close()
 
         return self
+
+    def explain(self):
+        """
+        Explain MongoDB query plan
+        """
+        self._make_pipeline()
+        return self.__mongo_database.command(
+            "aggregate",
+            self.__mongo_collection.name,
+            pipeline=self.mongo_pipeline.pipeline,
+            explain=True,
+        )
 
     def prepare_data(
         self,
