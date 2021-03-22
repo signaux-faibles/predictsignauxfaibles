@@ -28,15 +28,15 @@ def test_full_drop_na(fake_testing_dataset):
     """
     must drop 11 (9 in my_feature, 2 other in time_til_outcome)
     """
-    fake_testing_dataset._remove_na(cols_ignore_na=[])
+    fake_testing_dataset._remove_na(ignore=[])
     assert len(fake_testing_dataset) == 9
 
 
 def test_part_drop_na(fake_testing_dataset):
     """
-    must drop 9 (9 in my_feature, nothing from time_til_outcome, as the field is in cols_ignore_na)
+    must drop 9 (9 in my_feature, nothing from time_til_outcome, as the field is in ignore)
     """
-    fake_testing_dataset._remove_na(cols_ignore_na=["time_til_outcome"])
+    fake_testing_dataset._remove_na(ignore=["time_til_outcome"])
     assert len(fake_testing_dataset) == 11
 
 
@@ -45,7 +45,7 @@ def test_fill_defaults_and_drop_na(fake_testing_dataset):
     must replace 9 (None->0 for my_feature) and drop 2 (from time_til_outcome)
     """
     fake_testing_dataset._replace_missing_data(defaults_map={"my_feature": 0})
-    fake_testing_dataset._remove_na(cols_ignore_na=[])
+    fake_testing_dataset._remove_na(ignore=[])
     assert len(fake_testing_dataset) == 18
 
 
