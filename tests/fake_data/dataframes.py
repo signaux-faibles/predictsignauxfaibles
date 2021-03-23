@@ -18,3 +18,11 @@ df_test_paydex = pd.DataFrame(
         "paydex_nb_jours_past_12": [91, 30, 15],
     }
 )
+
+df_test_code_naf = pd.DataFrame(
+    {
+        "code_naf": ["A", "B", "E", "O", "P"],
+    }
+)
+
+df_test_full = pd.concat((df_test_code_naf, df_test_acoss, df_test_paydex), axis=1)
