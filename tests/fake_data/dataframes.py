@@ -11,3 +11,10 @@ df_test_acoss = pd.DataFrame(
         "montant_part_ouvriere_past_3": [0, 0, 1_200],
     }
 )
+
+df_test_paydex = pd.DataFrame(
+    {
+        "paydex_nb_jours": [10, 30, 10_000],
+        "paydex_nb_jours_past_12": [91, 30, 15],
+    }
+)
