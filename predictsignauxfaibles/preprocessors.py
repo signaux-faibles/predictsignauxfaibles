@@ -1,4 +1,5 @@
 from collections import namedtuple
+import numpy as np
 import pandas as pd
 
 
@@ -29,6 +30,30 @@ def paydex_make_groups(data: pd.DataFrame):
     return data
 
 
+def acoss_make_avg_delta_dette_par_effectif(data: pd.DataFrame):
+    """
+    Compute the average change in social debt / effectif
+    """
+
+    data["dette_par_effectif"] = (
+        (data["montant_part_ouvriere"] + data["montant_part_patronale"])
+        / data["effectif"]
+    ).replace([np.nan, np.inf, -np.inf], 0)
+
+    data["dette_par_effectif_past_3"] = (
+        (data["montant_part_ouvriere_past_3"] + data["montant_part_patronale_past_3"])
+        / data["effectif"]
+    ).replace([np.nan, np.inf, -np.inf], 0)
+
+    data["avg_delta_dette_par_effectif"] = (
+        data["dette_par_effectif"] - data["dette_par_effectif_past_3"]
+    ) / 3
+
+    columns_to_drop = ["dette_par_effectif", "dette_par_effectif_past_3"]
+    data.drop(columns=columns_to_drop, axis=1, inplace=True)
+    return data
+
+
 Preprocessor = namedtuple("Preprocessor", ["function", "input", "output"])
 
 PIPELINE = [
@@ -40,5 +65,16 @@ PIPELINE = [
     ),
     Preprocessor(
         paydex_make_groups, input=["paydex_nb_jours"], output=["paydex_group"]
+    ),
+    Preprocessor(
+        acoss_make_avg_delta_dette_par_effectif,
+        input=[
+            "effectif",
+            "montant_part_patronale",
+            "montant_part_ouvriere",
+            "montant_part_patronale_past_3",
+            "montant_part_ouvriere_past_3",
+        ],
+        output=["avg_delta_dette_par_effectif"],
     ),
 ]
