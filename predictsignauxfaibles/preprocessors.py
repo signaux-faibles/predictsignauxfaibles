@@ -25,7 +25,7 @@ def paydex_make_groups(data: pd.DataFrame):
     Cut paydex into bins
     """
     data["paydex_group"] = pd.cut(
-        data["paydex_nb_jours"], bins=(-float("inf"), 15, 30, 60, 90, float("inf"))
+        data["paydex_nb_jours"], bins=(-float("inf"), 0, 15, 30, 60, 90, float("inf"))
     )
     return data
 
