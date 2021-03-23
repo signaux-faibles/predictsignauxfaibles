@@ -1,6 +1,45 @@
 from collections import namedtuple
+import logging
+from typing import List
+
 import numpy as np
 import pandas as pd
+
+
+class MissingDataError(Exception):
+    """
+    Custom error type for `run_pipeline`
+    """
+
+
+def run_pipeline(data: pd.DataFrame, pipeline: List[namedtuple]):
+    """
+    Run a pipeline of Preprocessor objects on a dataframe
+    """
+    logging.info("Checking that input columns are all there.")
+    for preprocessor in pipeline:
+        if not set(preprocessor.input).issubset(data.columns):
+            missing_cols = set(preprocessor.input) - set(data.columns)
+            error_message = (
+                f"Missing variables {missing_cols} in order to run {preprocessor.name}."
+            )
+            raise MissingDataError(error_message)
+
+    logging.info("Running pipeline on data.")
+    data = data.copy()
+    for i, preprocessor in enumerate(pipeline):
+        logging.info(f"STEP {i+1}: {preprocessor.name}")
+        data = preprocessor.function(data)
+        if preprocessor.output is None:
+            continue
+        if not set(preprocessor.output).issubset(data.columns):
+            missing_output_cols = set(preprocessor.output) - set(data.columns)
+            warning_message = f"STEP {i+1}: function {preprocessor.function.__name__} \
+did not produce expected output {missing_output_cols}"
+            logging.warning(warning_message)
+            continue
+
+    return data
 
 
 def remove_administrations(data: pd.DataFrame):
@@ -54,19 +93,29 @@ def acoss_make_avg_delta_dette_par_effectif(data: pd.DataFrame):
     return data
 
 
-Preprocessor = namedtuple("Preprocessor", ["function", "input", "output"])
+Preprocessor = namedtuple("Preprocessor", ["name", "function", "input", "output"])
 
 PIPELINE = [
-    Preprocessor(remove_administrations, input=["code_naf"], output=None),
     Preprocessor(
-        paydex_make_yoy,
+        "Remove Administrations",
+        function=remove_administrations,
+        input=["code_naf"],
+        output=None,
+    ),
+    Preprocessor(
+        "Make `paydex_yoy`",
+        function=paydex_make_yoy,
         input=["paydex_nb_jours", "paydex_nb_jours_past_12"],
         output=["paydex_yoy"],
     ),
     Preprocessor(
-        paydex_make_groups, input=["paydex_nb_jours"], output=["paydex_group"]
+        "Make `paydex_group`",
+        function=paydex_make_groups,
+        input=["paydex_nb_jours"],
+        output=["paydex_group"],
     ),
     Preprocessor(
+        "Make `avg_delta_dette_par_effectif`",
         acoss_make_avg_delta_dette_par_effectif,
         input=[
             "effectif",
