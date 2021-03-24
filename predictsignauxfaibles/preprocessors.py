@@ -56,6 +56,7 @@ def paydex_make_yoy(data: pd.DataFrame):
     """
     TODO: this should be in opensignauxfaibles/reducejs2
     Compute a new column for the dataset containing the year-over-year
+    Output column : 'paydex_yoy'
     """
     data["paydex_yoy"] = data["paydex_nb_jours"] - data["paydex_nb_jours_past_12"]
     return data
@@ -64,6 +65,7 @@ def paydex_make_yoy(data: pd.DataFrame):
 def paydex_make_groups(data: pd.DataFrame):
     """
     Cut paydex into bins
+    Output column : 'paydex_group'
     """
     data["paydex_group"] = pd.cut(
         data["paydex_nb_jours"], bins=(-float("inf"), 0, 15, 30, 60, 90, float("inf"))
@@ -74,6 +76,7 @@ def paydex_make_groups(data: pd.DataFrame):
 def acoss_make_avg_delta_dette_par_effectif(data: pd.DataFrame):
     """
     Compute the average change in social debt / effectif
+    Output column : 'avg_delta_dette_par_effectif'
     """
 
     data["dette_par_effectif"] = (
