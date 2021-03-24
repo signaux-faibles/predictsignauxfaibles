@@ -5,6 +5,8 @@ from typing import List
 import numpy as np
 import pandas as pd
 
+Preprocessor = namedtuple("Preprocessor", ["name", "function", "input", "output"])
+
 
 class MissingDataError(Exception):
     """
@@ -92,8 +94,6 @@ def acoss_make_avg_delta_dette_par_effectif(data: pd.DataFrame):
     data.drop(columns=columns_to_drop, axis=1, inplace=True)
     return data
 
-
-Preprocessor = namedtuple("Preprocessor", ["name", "function", "input", "output"])
 
 PIPELINE = [
     Preprocessor(
