@@ -2,12 +2,16 @@ import logging
 from typing import List
 
 import pandas as pd
-from pymongo import MongoClient
+from pymongo import MongoClient, monitoring
 from pymongo.cursor import Cursor
 
 import predictsignauxfaibles.config as config
+from predictsignauxfaibles.logging import CommandLogger
 from predictsignauxfaibles.utils import MongoDBQuery, parse_yml_config
 from predictsignauxfaibles.decorators import is_random
+
+
+monitoring.register(CommandLogger())  # loglevel is debug
 
 
 class SFDataset:
@@ -35,11 +39,9 @@ class SFDataset:
         sirens: List = None,
         outcome: bool = None,
     ):
-        self.__mongo_client = MongoClient(host=config.MONGODB_PARAMS.url)
-        self.__mongo_database = self.__mongo_client.get_database(
-            config.MONGODB_PARAMS.db
-        )
-        self.__mongo_collection = self.__mongo_database.get_collection(
+        self._mongo_client = MongoClient(host=config.MONGODB_PARAMS.url)
+        self._mongo_database = self._mongo_client.get_database(config.MONGODB_PARAMS.db)
+        self._mongo_collection = self._mongo_database.get_collection(
             config.MONGODB_PARAMS.collection
         )
         self.data = None
@@ -56,23 +58,23 @@ class SFDataset:
         self.mongo_pipeline = MongoDBQuery()
 
     def _connect_to_mongo(self):
-        if self.__mongo_client is None:
+        if self._mongo_client is None:
             logging.debug("opening connection")
-            self.__mongo_client = MongoClient(host=config.MONGODB_PARAMS.url)
-            self.__mongo_database = self.__mongo_client.get_database(
+            self._mongo_client = MongoClient(host=config.MONGODB_PARAMS.url)
+            self._mongo_database = self._mongo_client.get_database(
                 config.MONGODB_PARAMS.db
             )
-            self.__mongo_collection = self.__mongo_database.get_collection(
+            self._mongo_collection = self._mongo_database.get_collection(
                 config.MONGODB_PARAMS.collection
             )
 
     def _disconnect_from_mongo(self):
-        if self.__mongo_client is not None:
+        if self._mongo_client is not None:
             logging.debug("closing connection")
-            self.__mongo_client.close()
-            self.__mongo_client = None
-            self.__mongo_database = None
-            self.__mongo_collection = None
+            self._mongo_client.close()
+            self._mongo_client = None
+            self._mongo_database = None
+            self._mongo_collection = None
 
     @classmethod
     def from_config_file(cls, path: str, mode: str = "train"):
@@ -92,18 +94,11 @@ class SFDataset:
             sample_size=conf[f"{mode}_on"].get("sample_size", 0),
         )
 
-    def fetch_data(self, warn: bool = True):
+    def _make_pipeline(self):
         """
-        Retrieve query from MongoDB database using the Aggregate framework
-        Store the resulting data in the `data` attribute
-        Args:
-            warn : emmit a warning if fetch_data is overwriting some already existing data
+        Build Mongo Aggregate pipeline for dataset and store it in the `mongo_pipeline` attribute
         """
-
         self.mongo_pipeline.reset()
-
-        if warn and self.data is not None:
-            logging.warning("Dataset object was not empty. Overriding...")
 
         self.mongo_pipeline.add_standard_match(
             self.date_min,
@@ -120,19 +115,48 @@ class SFDataset:
         if self.fields is not None:
             self.mongo_pipeline.add_projection(self.fields)
 
+        logging.debug(f"MongoDB Aggregate query: {self.mongo_pipeline.to_pipeline()}")
+
+    def fetch_data(self, warn: bool = True):
+        """
+        Retrieve query from MongoDB database using the Aggregate framework
+        Store the resulting data in the `data` attribute
+        Args:
+            warn : emmit a warning if fetch_data is overwriting some already existing data
+        """
+        self._make_pipeline()
+
+        if warn and self.data is not None:
+            logging.warning("Dataset object was not empty. Overriding...")
+
         try:
             self._connect_to_mongo()
-            cursor = self.__mongo_collection.aggregate(
-                self.mongo_pipeline.to_pipeline()
-            )
-
-            self.data = self.__cursor_to_df(cursor)
+            cursor = self._mongo_collection.aggregate(self.mongo_pipeline.to_pipeline())
         except Exception as exception:  # pylint: disable=broad-except
             raise exception
         finally:
             self._disconnect_from_mongo()
 
+        try:
+            self.data = self.__cursor_to_df(cursor)
+        except Exception as exception:
+            raise exception
+        finally:
+            cursor.close()
+
         return self
+
+    def explain(self):
+        """
+        Explain MongoDB query plan
+        """
+        self._make_pipeline()
+        return self._mongo_database.command(
+            "aggregate",
+            self._mongo_collection.name,
+            pipeline=self.mongo_pipeline.pipeline,
+            explain=True,
+        )
 
     def prepare_data(
         self,
@@ -198,12 +222,14 @@ class SFDataset:
                 logging.debug(f"Column {column} not in dataset")
                 continue
 
-    def _remove_na(self, cols_ignore_na: list):
+    def _remove_na(self, ignore: list):
         """
         Remove all observations with missing values.
+        Args:
+            ignore: a list of column names to ignore when dropping NAs
         """
 
-        cols_drop_na = set(self.data.columns).difference(set(cols_ignore_na))
+        cols_drop_na = set(self.data.columns).difference(set(ignore))
 
         logging.info("Removing NAs from dataset.")
         for feature in cols_drop_na:
@@ -211,7 +237,7 @@ class SFDataset:
                 f"Rows with NAs in field {feature} will be dropped, unless default val is provided"
             )
 
-        for feature in cols_ignore_na:
+        for feature in ignore:
             logging.debug(f"Rows with NAs in field {feature} will NOT be dropped")
 
         logging.info(f"Number of observations before: {len(self.data.index)}")
