@@ -140,6 +140,6 @@ def check_feature(feature_name: str, variables: list, pipeline: List[NamedTuple]
     if feature_name in variables:
         is_ok = True
     for step in pipeline:
-        if feature_name in step.output:
+        if step.output is not None and feature_name in step.output:
             is_ok = True
     return is_ok
