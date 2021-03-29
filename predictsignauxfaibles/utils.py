@@ -129,3 +129,17 @@ class MongoDBQuery:
         datetime usable by mongodb"
         """
         return pytz.utc.localize(datetime.strptime(date, "%Y-%m-%d"))
+
+
+def check_feature(feature_name: str, variables: list, pipeline: List[NamedTuple]):
+    """
+    Check that a feature is either explicitly requested from the database as a variable
+    or is created by a step in PIPELINE.
+    """
+    is_ok = False
+    if feature_name in variables:
+        is_ok = True
+    for step in pipeline:
+        if feature_name in step.output:
+            is_ok = True
+    return is_ok
