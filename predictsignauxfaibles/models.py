@@ -7,7 +7,6 @@ import pandas as pd
 
 from predictsignauxfaibles.data import SFDataset
 from predictsignauxfaibles.decorators import is_random
-from predictsignauxfaibles.utils import parse_yml_config
 
 
 class SFModel(ABC):
@@ -25,26 +24,6 @@ class SFModel(ABC):
         self.y = self.dataset.data[[self.target]]  # pylint: disable=invalid-name
         self._is_trained = False
         self._performance = None
-
-    @classmethod
-    def from_config_file(cls, path: str):
-        """
-        Instantiate a SFModel object via a yaml config file
-        Args:
-            path: path to config file (typically in ./models/{version}/model.yml)
-        """
-        # parse information needed to instantiate SFModel from config file
-        conf = parse_yml_config(path)
-        logging.info(f"Instantiating SFModel with config found in {path}")
-
-        # create dataset via config file
-        dataset = SFDataset.from_config_file(path).fetch_data()
-        dataset.prepare_data()
-
-        # return the instantiated SFModel object
-        return cls(
-            dataset=dataset, features=conf["features"], target=conf["target"]
-        )  # pylint: disable=no-value-for-parameter
 
     @abstractmethod
     def train(self):

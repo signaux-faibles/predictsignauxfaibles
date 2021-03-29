@@ -6,7 +6,6 @@ import pandas as pd
 import pytest
 
 from predictsignauxfaibles.data import SFDataset
-import predictsignauxfaibles.config as config
 
 
 @pytest.fixture

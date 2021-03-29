@@ -1,10 +1,7 @@
-from pathlib import Path
 from typing import NamedTuple, List
 
 from datetime import datetime
-import jsonschema
 import pytz
-import yaml
 
 
 class MongoParams(NamedTuple):
@@ -132,57 +129,3 @@ class MongoDBQuery:
         datetime usable by mongodb"
         """
         return pytz.utc.localize(datetime.strptime(date, "%Y-%m-%d"))
-
-
-def parse_yml_config(path: str):
-    """
-    Converts a YAML config file into a python object
-    Args:
-        path: a string path to the yaml file
-    """
-    parsed_path = Path(path)
-    if not parsed_path.exists():
-        raise ConfigFileError(f"path {parsed_path} does not exist")
-    if not parsed_path.is_file():
-        raise ConfigFileError(f"{parsed_path} is not a file")
-    if parsed_path.suffix != ".yml":
-        raise ConfigFileError("config file must be a .yml file")
-    data = yaml.load(parsed_path.read_bytes(), Loader=yaml.Loader)
-    jsonschema.validate(data, CONFIG_FILE_SCHEMA)
-    return data
-
-
-# JSONschema schema used to validate config files
-CONFIG_FILE_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "name": {"type": "string"},
-        "version": {"type": "string"},
-        "target": {"type": "string"},
-        "features": {"type": "array"},
-        "train_on": {
-            "type": "object",
-            "properties": {
-                "start_date": {"type": "string"},
-                "end_date": {"type": "string"},
-                "sample_size": {"type": "integer"},
-            },
-            "required": ["start_date", "end_date", "sample_size"],
-        },
-        "predict_on": {"type": "string"},
-    },
-    "required": [
-        "name",
-        "version",
-        "target",
-        "features",
-        "train_on",
-        "predict_on",
-    ],
-}
-
-
-class ConfigFileError(Exception):
-    """
-    Error class for Configuration Files-related issues
-    """

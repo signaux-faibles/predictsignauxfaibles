@@ -1,8 +1,6 @@
 # pylint: disable=missing-function-docstring
-from jsonschema import ValidationError
-import pytest
 
-from predictsignauxfaibles.utils import MongoDBQuery, parse_yml_config, ConfigFileError
+from predictsignauxfaibles.utils import MongoDBQuery
 
 
 def test_empty_pipeline():
@@ -55,18 +53,3 @@ def test_reset_pipeline():
         query.add_limit(limit=i)
         assert len(query.to_pipeline()) == 1
         query.reset()
-
-
-def test_parse_yaml_conf_ok():
-    conf = parse_yml_config("./tests/fake_data/correct.yml")
-    assert isinstance(conf, dict)
-
-
-def test_parse_yaml_conf_missing_keys():
-    with pytest.raises(ValidationError):
-        parse_yml_config("./tests/fake_data/missing_entry.yml")
-
-
-def test_parse_yaml_conf_file_not_found():
-    with pytest.raises(ConfigFileError):
-        parse_yml_config("./tests/fake_data/does_not_exist.docx")
