@@ -38,7 +38,7 @@ class SFDataset:
         sirets: List = None,
         sirens: List = None,
         outcome: bool = None,
-        **categorical_filters
+        **categorical_filters,
     ):
         self._mongo_client = MongoClient(host=config.MONGODB_PARAMS.url)
         self._mongo_database = self._mongo_client.get_database(config.MONGODB_PARAMS.db)
@@ -57,7 +57,7 @@ class SFDataset:
         self.sirens = sirens
         self.outcome = outcome
         self.categorical_filters = categorical_filters
-            
+
         self.mongo_pipeline = MongoDBQuery()
 
     def _connect_to_mongo(self):
