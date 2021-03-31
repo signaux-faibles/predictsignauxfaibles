@@ -52,6 +52,9 @@ class MongoDBQuery:
             "$match": {
                 "$and": [
                     {
+                        "value.random_order": {"$gte": 0}
+                    },  # this forces Mongo to use the Index
+                    {
                         "_id.periode": {
                             "$gte": self.__date_to_iso(date_min),
                             "$lt": self.__date_to_iso(date_max),
