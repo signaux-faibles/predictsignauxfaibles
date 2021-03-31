@@ -38,6 +38,7 @@ class SFDataset:
         sirets: List = None,
         sirens: List = None,
         outcome: bool = None,
+        **categorical_filters,
     ):
         self._mongo_client = MongoClient(host=config.MONGODB_PARAMS.url)
         self._mongo_database = self._mongo_client.get_database(config.MONGODB_PARAMS.db)
@@ -55,6 +56,11 @@ class SFDataset:
         self.sirets = sirets
         self.sirens = sirens
         self.outcome = outcome
+
+        if categorical_filters:
+            logging.warning("Queries using additional filters usually take longer.")
+        self.categorical_filters = categorical_filters
+
         self.mongo_pipeline = MongoDBQuery()
 
     def _connect_to_mongo(self):
@@ -106,6 +112,7 @@ class SFDataset:
             self.min_effectif,
             sirets=self.sirets,
             sirens=self.sirens,
+            categorical_filters=self.categorical_filters,
             outcome=self.outcome,
         )
         self.mongo_pipeline.add_sort()
