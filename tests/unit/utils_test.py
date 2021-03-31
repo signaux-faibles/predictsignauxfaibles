@@ -55,7 +55,7 @@ def test_filter_on_categoricals():
     pipeline = query.to_pipeline()
     assert "$match" in pipeline[0].keys()
     test_filters = [filter.keys() for filter in pipeline[0]["$match"]["$and"]]
-    assert "region" in list(itertools.chain(*test_filters))
+    assert "value.region" in list(itertools.chain(*test_filters))
     
 
 def test_same_stage_multiple_times():
