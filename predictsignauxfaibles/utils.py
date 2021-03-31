@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import NamedTuple, List
 
@@ -73,10 +74,15 @@ class MongoDBQuery:
                     self.match_stage["$match"]["$and"].append(
                         {f"value.{category}": {"$in": cat_filter}}
                     )
-                else:
+                elif isinstance(cat_filter, (int, float, str)):
                     self.match_stage["$match"]["$and"].append(
-                        {f"value.{category}": {"$eq": cat_filter}}
+                        {f"value.{category}": cat_filter}
                     )
+                else:
+                    logging.warning(
+                        f"Ignored filter of unknown type on category {category}."
+                    )
+                    continue
 
         if outcome is not None:
             self.match_stage["$match"]["$and"].append({"value.outcome": outcome})
