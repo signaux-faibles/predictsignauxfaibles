@@ -41,6 +41,22 @@ def test_full_query():
     for i, key in enumerate(("$match", "$sort", "$limit", "$replaceRoot", "$project")):
         assert key in pipeline[i].keys() and len(pipeline[i].keys()) == 1
 
+        
+def test_filter_on_categoricals():
+    import itertools
+    query = MongoDBQuery()
+    query.add_standard_match(
+        date_min="1999-12-13",
+        date_max="2021-12-10",
+        min_effectif=10,
+        sirets = ["44937840500012"],
+        categorical_filters = {"region": ["Bourgogne-Franche-Comté"]}
+    )
+    pipeline = query.to_pipeline()
+    assert "$match" in pipeline[0].keys()
+    test_filters = [filter.keys() for filter in pipeline[0]["$match"]["$and"]]
+    assert "region" in list(itertools.chain(*test_filters))
+    
 
 def test_same_stage_multiple_times():
     query = MongoDBQuery()
@@ -70,3 +86,4 @@ def test_parse_yaml_conf_missing_keys():
 def test_parse_yaml_conf_file_not_found():
     with pytest.raises(ConfigFileError):
         parse_yml_config("./tests/fake_data/does_not_exist.docx")
+    

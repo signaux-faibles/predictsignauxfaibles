@@ -37,6 +37,7 @@ class MongoDBQuery:
         min_effectif: int,
         sirets: List = None,
         sirens: List = None,
+        categorical_filters: dict = None,
         outcome: List = None,
     ):
         """
@@ -66,6 +67,13 @@ class MongoDBQuery:
         if sirens is not None:
             self.match_stage["$match"]["$and"].append({"value.siren": {"$in": sirens}})
 
+        if categorical_filters is not None:
+            for (category, cat_filter) in categorical_filters.items():
+                if isinstance(cat_filter, (list,tuple)):
+                    self.match_stage["$match"]["$and"].append({f"value.{category}": {"$in": cat_filter}})
+                else:
+                    self.match_stage["$match"]["$and"].append({f"value.{category}": {"$eq": cat_filter}})
+            
         if outcome is not None:
             self.match_stage["$match"]["$and"].append({"value.outcome": outcome})
         else:
