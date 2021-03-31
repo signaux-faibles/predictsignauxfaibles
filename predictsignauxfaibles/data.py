@@ -56,6 +56,9 @@ class SFDataset:
         self.sirets = sirets
         self.sirens = sirens
         self.outcome = outcome
+
+        if categorical_filters:
+            logging.warning("Queries using additional filters usually take longer.")
         self.categorical_filters = categorical_filters
 
         self.mongo_pipeline = MongoDBQuery()
