@@ -60,7 +60,7 @@ VARIABLES = [
 VARIABLES += ["outcome", "periode", "siret", "siren", "time_til_outcome", "code_naf"]
 
 # Model-specific préprocessing
-PIPELINE = DEFAULT_PIPELINE
+TRANSFO_PIPELINE = DEFAULT_PIPELINE
 
 # features
 FEATURES = [
@@ -84,7 +84,7 @@ FEATURES = [
 ]
 
 for feature in FEATURES:
-    if not check_feature(feature, VARIABLES, PIPELINE):
+    if not check_feature(feature, VARIABLES, TRANSFO_PIPELINE):
         raise ValueError(
             f"Feature '{feature}' is not in VARIABLES nor created by the PIPELINE"
         )
@@ -107,7 +107,7 @@ MODEL_PIPELINE = Pipeline(
 # Train Dataset
 TRAIN_FROM = "2016-01-01"
 TRAIN_TO = "2018-06-30"
-TRAIN_SAMPLE_SIZE = 1_000_000
+TRAIN_SAMPLE_SIZE = 5_000
 TRAIN_OVERSAMPLING = 0.2
 
 TRAIN_DATASET = OversampledSFDataset(
@@ -121,7 +121,7 @@ TRAIN_DATASET = OversampledSFDataset(
 # Test Dataset
 TEST_FROM = "2018-07-01"
 TEST_TO = "2018-10-31"
-TEST_SAMPLE_SIZE = 5_000_000
+TEST_SAMPLE_SIZE = 5_000
 
 TEST_DATASET = SFDataset(
     date_min=TEST_FROM, date_max=TEST_TO, fields=VARIABLES, sample_size=TEST_SAMPLE_SIZE
@@ -132,7 +132,7 @@ PREDICT_FROM = "2020-02-01"
 PREDICT_TO = "2020-02-28"
 
 PREDICT_DATASET = SFDataset(
-    date_min=PREDICT_FROM, date_max=PREDICT_TO, fields=VARIABLES, sample_size=5_000_000
+    date_min=PREDICT_FROM, date_max=PREDICT_TO, fields=VARIABLES, sample_size=1_000
 )
 
 if __name__ == "__main__":
