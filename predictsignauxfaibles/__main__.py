@@ -1,4 +1,3 @@
-# pylint: disable=protected-access
 from datetime import datetime
 import logging
 import sys
@@ -27,8 +26,7 @@ def run():
     conf.TRAIN_DATASET.fetch_data()
 
     logging.info(f"{step} - Data preprocessing")
-    conf.TRAIN_DATASET._replace_missing_data()
-    conf.TRAIN_DATASET._remove_na(ignore=["time_til_outcome"])
+    conf.TRAIN_DATASET.replace_missing_data().remove_na(ignore=["time_til_outcome"])
     conf.TRAIN_DATASET.data = run_pipeline(
         conf.TRAIN_DATASET.data, conf.TRANSFO_PIPELINE
     )
@@ -43,9 +41,9 @@ def run():
     conf.TEST_DATASET.fetch_data()
 
     logging.info(f"{step} - Data preprocessing")
-    conf.TEST_DATASET._replace_missing_data()
-    conf.TEST_DATASET._remove_na(ignore=["time_til_outcome"])
-    conf.TEST_DATASET._remove_strong_signals()
+    conf.TEST_DATASET.replace_missing_data().remove_na(
+        ignore=["time_til_outcome"]
+    ).remove_strong_signals()
     conf.TEST_DATASET.data = run_pipeline(conf.TEST_DATASET.data, conf.TRANSFO_PIPELINE)
     logging.info(f"{step} - Testing on {len(conf.TEST_DATASET)} observations.")
 
@@ -58,8 +56,8 @@ def run():
     logging.info(f"{step} - Fetching predict set")
     conf.PREDICT_DATASET.fetch_data()
     logging.info(f"{step} - Data preprocessing")
-    conf.PREDICT_DATASET._replace_missing_data()
-    conf.PREDICT_DATASET._remove_na(ignore=["time_til_outcome", "outcome"])
+    conf.PREDICT_DATASET.replace_missing_data()
+    conf.PREDICT_DATASET.remove_na(ignore=["time_til_outcome", "outcome"])
     conf.PREDICT_DATASET.data = run_pipeline(
         conf.PREDICT_DATASET.data, conf.TRANSFO_PIPELINE
     )

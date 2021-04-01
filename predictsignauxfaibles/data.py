@@ -147,42 +147,7 @@ class SFDataset:
             explain=True,
         )
 
-    def prepare_data(
-        self,
-        remove_strong_signals: bool = False,
-        defaults_map: dict = None,
-        cols_ignore_na: list = None,
-    ):
-        """
-        Run data preparation operations on the dataset.
-        remove_strong_signals drops observations with time_til_outcome <= 0
-         (i.e. firms that are already in default).
-        """
-        assert isinstance(
-            self.data, pd.DataFrame
-        ), "DataFrame not found. Please fetch data first."
-
-        if defaults_map is None:
-            defaults_map = config.DEFAULT_DATA_VALUES
-
-        if cols_ignore_na is None:
-            cols_ignore_na = config.IGNORE_NA
-
-        logging.info("Replacing missing data with default values")
-        self._replace_missing_data(defaults_map)
-
-        logging.info("Drop observations with missing required fields.")
-        self._remove_na(cols_ignore_na)
-
-        if remove_strong_signals:
-            logging.info("Removing 'strong signals'.")
-            self._remove_strong_signals()
-
-        logging.info("Resetting index for DataFrame.")
-        self.data.reset_index(drop=True, inplace=True)
-        return self
-
-    def _remove_strong_signals(self):
+    def remove_strong_signals(self):
         """
         Strong signals is when a firm is already in default (time_til_outcome <= 0)
         """
@@ -191,8 +156,10 @@ class SFDataset:
         ), "The `time_til_outcome` column is needed in order to remove strong signals."
 
         self.data = self.data[~(self.data["time_til_outcome"] <= 0)]
+        self.data.reset_index(drop=True, inplace=True)
+        return self
 
-    def _replace_missing_data(self, defaults_map: dict = None):
+    def replace_missing_data(self, defaults_map: dict = None):
         """
         Replace missing data with defaults defined in project config
         Args:
@@ -210,8 +177,10 @@ class SFDataset:
             except KeyError:
                 logging.debug(f"Column {column} not in dataset")
                 continue
+        self.data.reset_index(drop=True, inplace=True)
+        return self
 
-    def _remove_na(self, ignore: list):
+    def remove_na(self, ignore: list):
         """
         Remove all observations with missing values.
         Args:
@@ -232,6 +201,8 @@ class SFDataset:
         logging.info(f"Number of observations before: {len(self.data.index)}")
         self.data.dropna(subset=cols_drop_na, inplace=True)
         logging.info(f"Number of observations after: {len(self.data.index)}")
+        self.data.reset_index(drop=True, inplace=True)
+        return self
 
     def __repr__(self):
         out = f"""
@@ -298,3 +269,4 @@ class OversampledSFDataset(SFDataset):
         false_data = self.data
         full_data = true_data.append(false_data)
         self.data = full_data.sample(frac=1).reset_index(drop=True)
+        return self
