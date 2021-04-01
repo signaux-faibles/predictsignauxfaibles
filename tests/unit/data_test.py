@@ -64,3 +64,12 @@ def test_chained_methods(fake_testing_dataset):
         ignore=[]
     ).remove_strong_signals()
     assert len(fake_testing_dataset) == 13
+
+
+def test_remove_siren(fake_testing_dataset):
+    """
+    must drop 6 (lines that will match select sirens in siren_list)
+    """
+    siren_list = fake_testing_dataset.data["siren"].sample(n=6).tolist()
+    fake_testing_dataset.remove_siren(siren_list=siren_list)
+    assert len(fake_testing_dataset) == 14
