@@ -40,6 +40,9 @@ def run():
     logging.info(f"{step} - Fetching test set")
     conf.TEST_DATASET.fetch_data()
 
+    train_siren_set = conf.TRAIN_DATASET.data["siren"].unique()
+    conf.TEST_DATASET.data = conf.TEST_DATASET.data[~conf.TEST_DATASET.data["siren"].isin(train_siren_set)]
+    
     logging.info(f"{step} - Data preprocessing")
     conf.TEST_DATASET.replace_missing_data().remove_na(
         ignore=["time_til_outcome"]
