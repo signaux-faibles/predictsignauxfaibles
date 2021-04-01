@@ -204,6 +204,20 @@ class SFDataset:
         self.data.reset_index(drop=True, inplace=True)
         return self
 
+    def remove_siren(self, siren_list: list):
+        """
+        Removes all observations corresponding to
+        one of the siren provided as input.
+        Args:
+            siren_list: a list of siren to be removed from the data.
+        """
+        orig_length = len(self.data.index)
+        self.data = self.data[~self.data["siren"].isin(siren_list)]
+        post_length = len(self.data.index)
+        logging.info(
+            f"Removed {orig_length - post_length} from data based on SIREN blacklist"
+        )
+
     def __repr__(self):
         out = f"""
 Signaux Faibles Dataset
