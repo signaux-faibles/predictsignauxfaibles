@@ -1,6 +1,7 @@
 # pylint: disable=invalid-name
 import logging
 import sys
+import csv
 
 from os import path
 import argparse
@@ -9,7 +10,7 @@ import importlib.util
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
-from sklearn.metrics import balanced_accuracy_score
+from sklearn.metrics import fbeta_score, balanced_accuracy_score
 from predictsignauxfaibles.pipelines import run_pipeline
 from predictsignauxfaibles.data import OversampledSFDataset, SFDataset
 
@@ -40,13 +41,30 @@ def load_conf(args):  # pylint: disable=redefined-outer-name
     return model_conf
 
 
-def run(args):  # pylint: disable=redefined-outer-name
+def evaluate(model, df):  # To be turned into a SFModel method when refactoring models
+    """
+    Returns evaluation metrics of model evaluated on df
+    Args:
+        model: a sklearn-like model with a predict method
+        df: dataset
+    """
+    balanced_accuracy = balanced_accuracy_score(df["outcome"], model.predict(df))
+    fbeta = fbeta_score(df["outcome"], model.predict(df), beta=conf.EVAL_BETA)
+    return balanced_accuracy, fbeta
+
+
+def run(
+    args,
+):  # pylint: disable=redefined-outer-name,too-many-statements,too-many-locals
     """
     Run model
     """
     logging.info(f"Running Model {conf.MODEL_ID} (commit {conf.MODEL_GIT_SHA})")
+    stats = vars(args)
+    stats["run_on"] = datetime.datetime()
 
     step = "[TRAIN]"
+    stats["train"] = {}
     TRAIN_DATASET = OversampledSFDataset(
         args.train_proportion_positive_class,
         date_min=args.train_from,
@@ -64,7 +82,14 @@ def run(args):  # pylint: disable=redefined-outer-name
     logging.info(f"{step} - Training on {len(TRAIN_DATASET)} observations.")
     fit = conf.MODEL_PIPELINE.fit(TRAIN_DATASET.data, TRAIN_DATASET.data["outcome"])
 
+    balanced_accuracy_train, fbeta_train = evaluate(fit, TRAIN_DATASET)
+    logging.info(f"{step} - Balanced_accuracy: {balanced_accuracy_train}")
+    logging.info(f"{step} - F{conf.EVAL_BETA} score: {fbeta_train}")
+    stats["train"]["balanced_accuracy"] = balanced_accuracy_train
+    stats["train"]["Fbeta"] = fbeta_train
+
     step = "[TEST]"
+    stats["test"] = {}
     TEST_DATASET = SFDataset(
         date_min=args.test_from,
         date_max=args.test_to,
@@ -84,13 +109,14 @@ def run(args):  # pylint: disable=redefined-outer-name
     TEST_DATASET.data = run_pipeline(TEST_DATASET.data, conf.TRANSFO_PIPELINE)
     logging.info(f"{step} - Testing on {len(TEST_DATASET)} observations.")
 
-    balanced_accuracy = balanced_accuracy_score(
-        TEST_DATASET.data["outcome"], fit.predict(TEST_DATASET.data)
-    )
-    logging.info(f"{step} - Test balanced_accuracy: {balanced_accuracy}")
+    balanced_accuracy_test, fbeta_test = evaluate(fit, TEST_DATASET)
+    logging.info(f"{step} - Balanced_accuracy: {balanced_accuracy_test}")
+    logging.info(f"{step} - F{conf.EVAL_BETA} score: {fbeta_test}")
+    stats["test"]["balanced_accuracy"] = balanced_accuracy_test
+    stats["test"]["Fbeta"] = fbeta_test
 
     step = "[PREDICT]"
-    args.predict_on = args.predict_on
+    stats["predict"] = {}
     predict_from = args.predict_on + relativedelta(day=1)
     predict_to = args.predict_on + relativedelta(months=+1)
     predict_to = predict_to + relativedelta(days=-1)
@@ -114,6 +140,10 @@ def run(args):  # pylint: disable=redefined-outer-name
     PREDICT_DATASET.data[["siren", "siret", "predicted_probability"]].to_csv(
         export_destination, index=False
     )
+
+    with open(f"stats-{model_id}.csv", "wb") as f:
+        w = csv.writer(f)
+        w.writerows(stats.items())
 
 
 parser = argparse.ArgumentParser("main.py", description="Run model prediction")

@@ -117,6 +117,9 @@ TEST_SAMPLE_SIZE = 5_000
 # Predict Dataset
 PREDICT_ON = "2020-02-01"
 
+# Evaluation parameters
+EVAL_BETA = 2
+
 if __name__ == "__main__":
     logging.getLogger().setLevel("INFO")
     logging.info(f"Model {MODEL_ID}")

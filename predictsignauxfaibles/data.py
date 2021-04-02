@@ -211,9 +211,9 @@ class SFDataset:
         Args:
             siren_list: a list of siren to be removed from the data.
         """
-        orig_length = len(self.data.index)
+        orig_length = len(self)
         self.data = self.data[~self.data["siren"].isin(siren_list)]
-        post_length = len(self.data.index)
+        post_length = len(self)
         logging.info(
             f"Removed {orig_length - post_length} from data based on SIREN blacklist"
         )
