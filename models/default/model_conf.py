@@ -8,7 +8,6 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn_pandas import DataFrameMapper
 
 from predictsignauxfaibles.config import DEFAULT_DATA_VALUES, IGNORE_NA
-from predictsignauxfaibles.data import OversampledSFDataset, SFDataset
 from predictsignauxfaibles.pipelines import DEFAULT_PIPELINE
 from predictsignauxfaibles.utils import check_feature
 
@@ -110,30 +109,13 @@ TRAIN_TO = "2018-06-30"
 TRAIN_SAMPLE_SIZE = 5_000
 TRAIN_OVERSAMPLING = 0.2
 
-TRAIN_DATASET = OversampledSFDataset(
-    TRAIN_OVERSAMPLING,
-    date_min=TRAIN_FROM,
-    date_max=TRAIN_TO,
-    fields=VARIABLES,
-    sample_size=TRAIN_SAMPLE_SIZE,
-)
-
 # Test Dataset
 TEST_FROM = "2018-07-01"
 TEST_TO = "2018-10-31"
 TEST_SAMPLE_SIZE = 5_000
 
-TEST_DATASET = SFDataset(
-    date_min=TEST_FROM, date_max=TEST_TO, fields=VARIABLES, sample_size=TEST_SAMPLE_SIZE
-)
-
 # Predict Dataset
-PREDICT_FROM = "2020-02-01"
-PREDICT_TO = "2020-02-28"
-
-PREDICT_DATASET = SFDataset(
-    date_min=PREDICT_FROM, date_max=PREDICT_TO, fields=VARIABLES, sample_size=1_000
-)
+PREDICT_ON = "2020-02-01"
 
 if __name__ == "__main__":
     logging.getLogger().setLevel("INFO")
