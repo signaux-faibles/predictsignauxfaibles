@@ -66,12 +66,12 @@ def run(
     Run model
     """
     logging.info(f"Running Model {conf.MODEL_ID} (commit {conf.MODEL_GIT_SHA})")
-    stats = vars(args)
+    model_stats = vars(args)
     model_id = datetime.now().strftime("%Y%m%d-%H%M%S")
-    stats["run_on"] = model_id
+    model_stats["run_on"] = model_id
 
     step = "[TRAIN]"
-    stats["train"] = {}
+    model_stats["train"] = {}
     TRAIN_DATASET = OversampledSFDataset(
         args.train_proportion_positive_class,
         date_min=args.train_from,
@@ -92,11 +92,11 @@ def run(
     balanced_accuracy_train, fbeta_train = evaluate(fit, TRAIN_DATASET)
     logging.info(f"{step} - Balanced_accuracy: {balanced_accuracy_train}")
     logging.info(f"{step} - F{conf.EVAL_BETA} score: {fbeta_train}")
-    stats["train"]["balanced_accuracy"] = balanced_accuracy_train
-    stats["train"]["Fbeta"] = fbeta_train
+    model_stats["train"]["balanced_accuracy"] = balanced_accuracy_train
+    model_stats["train"]["Fbeta"] = fbeta_train
 
     step = "[TEST]"
-    stats["test"] = {}
+    model_stats["test"] = {}
     TEST_DATASET = SFDataset(
         date_min=args.test_from,
         date_max=args.test_to,
@@ -119,11 +119,11 @@ def run(
     balanced_accuracy_test, fbeta_test = evaluate(fit, TEST_DATASET)
     logging.info(f"{step} - Balanced_accuracy: {balanced_accuracy_test}")
     logging.info(f"{step} - F{conf.EVAL_BETA} score: {fbeta_test}")
-    stats["test"]["balanced_accuracy"] = balanced_accuracy_test
-    stats["test"]["Fbeta"] = fbeta_test
+    model_stats["test"]["balanced_accuracy"] = balanced_accuracy_test
+    model_stats["test"]["Fbeta"] = fbeta_test
 
     step = "[PREDICT]"
-    stats["predict"] = {}
+    model_stats["predict"] = {}
 
     PREDICT_DATASET = SFDataset(
         date_min=args.predict_on,
@@ -148,7 +148,7 @@ def run(
     )
 
     with open(f"stats-{model_id}.json", "w") as stats_file:
-        stats_file.write(json.dumps(stats))
+        stats_file.write(json.dumps(model_stats))
 
 
 parser = argparse.ArgumentParser("main.py", description="Run model prediction")
