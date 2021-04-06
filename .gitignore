@@ -134,3 +134,5 @@ notebooks/val-*
 # ignore documentation file of variables
 variables.json
 
+# ignore model run outputs
+model_runs/*

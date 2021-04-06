@@ -21,6 +21,9 @@ MONGODB_PARAMS = MongoParams(
 # Other parameters (maybe group them into coherent groups one day...)
 MIN_EFFECTIF = int(os.getenv("MIN_EFFECTIF"))
 
+# Output folder for model runs
+OUTPUT_FOLDER = "model_runs"
+
 # Default values for data
 
 DEFAULT_DATA_VALUES = {
