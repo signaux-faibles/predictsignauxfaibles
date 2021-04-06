@@ -56,7 +56,7 @@ def evaluate(
     fbeta = fbeta_score(
         dataset.data["outcome"], model.predict(dataset.data), beta=conf.EVAL_BETA
     )
-    return balanced_accuracy, fbeta
+    return {"balanced_accuracy": balanced_accuracy, "fbeta": fbeta}
 
 
 def run(
@@ -89,7 +89,9 @@ def run(
     logging.info(f"{step} - Training on {len(TRAIN_DATASET)} observations.")
     fit = conf.MODEL_PIPELINE.fit(TRAIN_DATASET.data, TRAIN_DATASET.data["outcome"])
 
-    balanced_accuracy_train, fbeta_train = evaluate(fit, TRAIN_DATASET)
+    eval_metrics = evaluate(fit, TRAIN_DATASET)
+    balanced_accuracy_train = eval_metrics.get("balanced_accuracy")
+    fbeta_train = eval_metrics.get("fbeta")
     logging.info(f"{step} - Balanced_accuracy: {balanced_accuracy_train}")
     logging.info(f"{step} - F{conf.EVAL_BETA} score: {fbeta_train}")
     model_stats["train"]["balanced_accuracy"] = balanced_accuracy_train
@@ -116,7 +118,9 @@ def run(
     TEST_DATASET.data = run_pipeline(TEST_DATASET.data, conf.TRANSFO_PIPELINE)
     logging.info(f"{step} - Testing on {len(TEST_DATASET)} observations.")
 
-    balanced_accuracy_test, fbeta_test = evaluate(fit, TEST_DATASET)
+    eval_metrics = evaluate(fit, TEST_DATASET)
+    balanced_accuracy_test = eval_metrics.get("balanced_accuracy")
+    fbeta_test = eval_metrics.get("fbeta")
     logging.info(f"{step} - Balanced_accuracy: {balanced_accuracy_test}")
     logging.info(f"{step} - F{conf.EVAL_BETA} score: {fbeta_test}")
     model_stats["test"]["balanced_accuracy"] = balanced_accuracy_test
