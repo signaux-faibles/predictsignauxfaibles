@@ -1,13 +1,12 @@
 # pylint: disable=invalid-name
+import argparse
+from datetime import datetime
+import importlib.util
 import json
 import logging
+from pathlib import Path
 import sys
 
-from os import path
-import argparse
-import importlib.util
-
-from datetime import datetime
 
 from sklearn.metrics import fbeta_score, balanced_accuracy_score
 from predictsignauxfaibles.pipelines import run_pipeline
@@ -30,7 +29,9 @@ def load_conf(args):  # pylint: disable=redefined-outer-name
             model_name
             model_conf_path
     """
-    conf_filepath = path.join("models", args.model_name, args.model_conf_path + ".py")
+    conf_filepath = Path("models") / args.model_name / (args.model_conf_path + ".py")
+    if not conf_filepath.exists():
+        raise ValueError(f"{conf_filepath} does not exist")
 
     spec = importlib.util.spec_from_file_location(
         f"models.{args.model_name}.{args.model_conf_path}", conf_filepath
@@ -152,7 +153,7 @@ def run(
 
 parser = argparse.ArgumentParser("main.py", description="Run model prediction")
 
-config_help = """
+CONFIG_HELP = """
 The name of the model configuration file that you wish to use, relative to predictsignauxfaibles/models/<YOUR_MODEL_NAME>/".
 A model configuration file describes the model tp be trained, some training and scoring parameters, as well as default train, test and predict dates.
 Any additional argument provided to this script will override the default variables declared in the configuration file.
@@ -169,7 +170,7 @@ parser.add_argument(
     type=str,
     dest="model_conf_path",
     default="model_conf",
-    help=config_help,
+    help=CONFIG_HELP,
 )
 conf_args = parser.parse_args()
 
