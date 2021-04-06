@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name
 import argparse
 from datetime import datetime
 import importlib.util
@@ -72,7 +71,7 @@ def run(
 
     step = "[TRAIN]"
     model_stats["train"] = {}
-    TRAIN_DATASET = OversampledSFDataset(
+    train_dataset = OversampledSFDataset(
         args.train_proportion_positive_class,
         date_min=args.train_from,
         date_max=args.train_to,
@@ -80,16 +79,16 @@ def run(
         sample_size=args.train_spl_size,
     )
     logging.info(f"{step} - Fetching train set")
-    TRAIN_DATASET.fetch_data()
+    train_dataset.fetch_data()
 
     logging.info(f"{step} - Data preprocessing")
-    TRAIN_DATASET.replace_missing_data().remove_na(ignore=["time_til_outcome"])
-    TRAIN_DATASET.data = run_pipeline(TRAIN_DATASET.data, conf.TRANSFO_PIPELINE)
+    train_dataset.replace_missing_data().remove_na(ignore=["time_til_outcome"])
+    train_dataset.data = run_pipeline(train_dataset.data, conf.TRANSFO_PIPELINE)
 
-    logging.info(f"{step} - Training on {len(TRAIN_DATASET)} observations.")
-    fit = conf.MODEL_PIPELINE.fit(TRAIN_DATASET.data, TRAIN_DATASET.data["outcome"])
+    logging.info(f"{step} - Training on {len(train_dataset)} observations.")
+    fit = conf.MODEL_PIPELINE.fit(train_dataset.data, train_dataset.data["outcome"])
 
-    eval_metrics = evaluate(fit, TRAIN_DATASET)
+    eval_metrics = evaluate(fit, train_dataset)
     balanced_accuracy_train = eval_metrics.get("balanced_accuracy")
     fbeta_train = eval_metrics.get("fbeta")
     logging.info(f"{step} - Balanced_accuracy: {balanced_accuracy_train}")
@@ -99,26 +98,26 @@ def run(
 
     step = "[TEST]"
     model_stats["test"] = {}
-    TEST_DATASET = SFDataset(
+    test_dataset = SFDataset(
         date_min=args.test_from,
         date_max=args.test_to,
         fields=conf.VARIABLES,
         sample_size=args.test_spl_size,
     )
     logging.info(f"{step} - Fetching test set")
-    TEST_DATASET.fetch_data()
+    test_dataset.fetch_data()
 
-    train_siren_set = TRAIN_DATASET.data["siren"].unique().tolist()
-    TEST_DATASET.remove_siren(train_siren_set)
+    train_siren_set = train_dataset.data["siren"].unique().tolist()
+    test_dataset.remove_siren(train_siren_set)
 
     logging.info(f"{step} - Data preprocessing")
-    TEST_DATASET.replace_missing_data().remove_na(
+    test_dataset.replace_missing_data().remove_na(
         ignore=["time_til_outcome"]
     ).remove_strong_signals()
-    TEST_DATASET.data = run_pipeline(TEST_DATASET.data, conf.TRANSFO_PIPELINE)
-    logging.info(f"{step} - Testing on {len(TEST_DATASET)} observations.")
+    test_dataset.data = run_pipeline(test_dataset.data, conf.TRANSFO_PIPELINE)
+    logging.info(f"{step} - Testing on {len(test_dataset)} observations.")
 
-    eval_metrics = evaluate(fit, TEST_DATASET)
+    eval_metrics = evaluate(fit, test_dataset)
     balanced_accuracy_test = eval_metrics.get("balanced_accuracy")
     fbeta_test = eval_metrics.get("fbeta")
     logging.info(f"{step} - Balanced_accuracy: {balanced_accuracy_test}")
@@ -129,21 +128,21 @@ def run(
     step = "[PREDICT]"
     model_stats["predict"] = {}
 
-    PREDICT_DATASET = SFDataset(
+    predict_dataset = SFDataset(
         date_min=args.predict_on,
         date_max=args.predict_on[:-2] + "28",
         fields=conf.VARIABLES,
         sample_size=conf.PREDICT_SAMPLE_SIZE,
     )
     logging.info(f"{step} - Fetching predict set")
-    PREDICT_DATASET.fetch_data()
+    predict_dataset.fetch_data()
     logging.info(f"{step} - Data preprocessing")
-    PREDICT_DATASET.replace_missing_data()
-    PREDICT_DATASET.remove_na(ignore=["time_til_outcome", "outcome"])
-    PREDICT_DATASET.data = run_pipeline(PREDICT_DATASET.data, conf.TRANSFO_PIPELINE)
-    logging.info(f"{step} - Predicting on {len(PREDICT_DATASET)} observations.")
-    predictions = fit.predict_proba(PREDICT_DATASET.data)
-    PREDICT_DATASET.data["predicted_probability"] = predictions[:, 1]
+    predict_dataset.replace_missing_data()
+    predict_dataset.remove_na(ignore=["time_til_outcome", "outcome"])
+    predict_dataset.data = run_pipeline(predict_dataset.data, conf.TRANSFO_PIPELINE)
+    logging.info(f"{step} - Predicting on {len(predict_dataset)} observations.")
+    predictions = fit.predict_proba(predict_dataset.data)
+    predict_dataset.data["predicted_probability"] = predictions[:, 1]
 
     logging.info(f"{step} - Exporting prediction data to csv")
 
@@ -151,7 +150,7 @@ def run(
     run_path.mkdir(parents=True, exist_ok=True)
 
     export_destination = f"predictions-{model_id}.csv"
-    PREDICT_DATASET.data[["siren", "siret", "predicted_probability"]].to_csv(
+    predict_dataset.data[["siren", "siret", "predicted_probability"]].to_csv(
         run_path / export_destination, index=False
     )
 
