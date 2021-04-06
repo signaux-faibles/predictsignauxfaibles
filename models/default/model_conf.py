@@ -1,5 +1,6 @@
 from datetime import datetime
 import logging
+import os
 import subprocess
 
 from sklearn.linear_model import LogisticRegression
@@ -10,6 +11,10 @@ from sklearn_pandas import DataFrameMapper
 from predictsignauxfaibles.config import DEFAULT_DATA_VALUES, IGNORE_NA
 from predictsignauxfaibles.pipelines import DEFAULT_PIPELINE
 from predictsignauxfaibles.utils import check_feature
+
+# ENV (default is "develop", can be set to "prod")
+ENV = os.getenv("ENV", "develop")
+
 
 # Model Information
 MODEL_ID = "202103_logreg_full"
@@ -106,23 +111,24 @@ MODEL_PIPELINE = Pipeline(
 # Train Dataset
 TRAIN_FROM = "2016-01-01"
 TRAIN_TO = "2018-06-30"
-TRAIN_SAMPLE_SIZE = 5_000
+TRAIN_SAMPLE_SIZE = 1_000_000 if ENV == "prod" else 5_000
 TRAIN_OVERSAMPLING = 0.2
 
 # Test Dataset
 TEST_FROM = "2018-07-01"
 TEST_TO = "2018-10-31"
-TEST_SAMPLE_SIZE = 5_000
+TEST_SAMPLE_SIZE = 1_000_000 if ENV == "prod" else 5_000
 
 # Predict Dataset
 PREDICT_ON = "2020-02-01"
-PREDICT_SAMPLE_SIZE = 5_000  # set to 1_000_000_000 in prod ==> no limit
+PREDICT_SAMPLE_SIZE = 1_000_000_000 if ENV == "prod" else 5_000
 
 # Evaluation parameters
 EVAL_BETA = 2
 
 if __name__ == "__main__":
     logging.getLogger().setLevel("INFO")
+    logging.info(f"ENV : {ENV}")
     logging.info(f"Model {MODEL_ID}")
     logging.info(f"Run on {MODEL_RUN_DATE}")
     logging.info(f"Current commit: {MODEL_GIT_SHA}")
