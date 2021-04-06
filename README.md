@@ -1,6 +1,5 @@
 # predictsignauxfaibles
 Dépôt du code python permettant la production de liste de prédiction Signaux Faibles.
-
 ## Dépendances / pré-requis
 - python 3.6.4
 - Docker (:construction_worker:)
@@ -59,6 +58,20 @@ python -m python_githooks
 
 Commencer à travailler !
 
+## Faire tourner un modèle
+
+Les modèles sont configurés dans un fichier de configuration en python dans `models/<model_name>/model_conf.py`. Certaines valeurs peuvent être changées via le CLI (`python -m predictsignauxfaibles --help`).
+
+Chaque run de modèle produit 2 fichiers dans `./model_runs/<model_id>` **qui n'est pas commité sur Git** :
+- les prédictions du modèle
+- des statistiques de performance du modèle
+
+La variable d'environnement `ENV` permet de faire tourner le modèle en mode `develop` (utilisant moins de données, le défaut) ou bien en `prod`:
+
+```sh
+export ENV=prod
+python -m predictsignauxfaibles
+```
 
 ## Structure du Dépot
 (librement inspiré du [cookiecutter data science](https://drivendata.github.io/cookiecutter-data-science))
