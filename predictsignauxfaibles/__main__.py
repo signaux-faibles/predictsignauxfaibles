@@ -28,14 +28,13 @@ def load_conf(args):  # pylint: disable=redefined-outer-name
     Args:
         conf_args: a argparse.Namespace object containing attributes
             model_name
-            model_conf_path
     """
-    conf_filepath = Path("models") / args.model_name / (args.model_conf_path + ".py")
+    conf_filepath = Path("models") / args.model_name / "model_conf.py"
     if not conf_filepath.exists():
         raise ValueError(f"{conf_filepath} does not exist")
 
     spec = importlib.util.spec_from_file_location(
-        f"models.{args.model_name}.{args.model_conf_path}", conf_filepath
+        f"models.{args.model_name}.model_conf", conf_filepath
     )
     model_conf = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(model_conf)  # pylint: disable=wrong-import-position
@@ -162,25 +161,13 @@ def run(
 
 parser = argparse.ArgumentParser("main.py", description="Run model prediction")
 
-CONFIG_HELP = """
-The name of the model configuration file that you wish to use, relative to predictsignauxfaibles/models/<YOUR_MODEL_NAME>/".
-A model configuration file describes the model tp be trained, some training and scoring parameters, as well as default train, test and predict dates.
-Any additional argument provided to this script will override the default variables declared in the configuration file.
-By default, will use model_config.py
-"""
 parser.add_argument(
     "--model_name",
     type=str,
     default="default",
     help="The model to use for prediction. If not provided, models/default will be used",
 )
-parser.add_argument(
-    "--config_file",
-    type=str,
-    dest="model_conf_path",
-    default="model_conf",
-    help=CONFIG_HELP,
-)
+
 conf_args = parser.parse_args()
 
 conf = load_conf(conf_args)
