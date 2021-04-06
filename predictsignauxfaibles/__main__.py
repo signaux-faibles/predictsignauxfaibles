@@ -1,14 +1,13 @@
 # pylint: disable=invalid-name
+import json
 import logging
 import sys
-import csv
 
 from os import path
 import argparse
 import importlib.util
 
 from datetime import datetime
-from dateutil.relativedelta import relativedelta
 
 from sklearn.metrics import fbeta_score, balanced_accuracy_score
 from predictsignauxfaibles.pipelines import run_pipeline
@@ -41,15 +40,21 @@ def load_conf(args):  # pylint: disable=redefined-outer-name
     return model_conf
 
 
-def evaluate(model, df):  # To be turned into a SFModel method when refactoring models
+def evaluate(
+    model, dataset
+):  # To be turned into a SFModel method when refactoring models
     """
     Returns evaluation metrics of model evaluated on df
     Args:
         model: a sklearn-like model with a predict method
         df: dataset
     """
-    balanced_accuracy = balanced_accuracy_score(df["outcome"], model.predict(df))
-    fbeta = fbeta_score(df["outcome"], model.predict(df), beta=conf.EVAL_BETA)
+    balanced_accuracy = balanced_accuracy_score(
+        dataset.data["outcome"], model.predict(dataset.data)
+    )
+    fbeta = fbeta_score(
+        dataset.data["outcome"], model.predict(dataset.data), beta=conf.EVAL_BETA
+    )
     return balanced_accuracy, fbeta
 
 
@@ -61,7 +66,8 @@ def run(
     """
     logging.info(f"Running Model {conf.MODEL_ID} (commit {conf.MODEL_GIT_SHA})")
     stats = vars(args)
-    stats["run_on"] = datetime.datetime()
+    model_id = datetime.now().strftime("%Y%m%d-%H%M%S")
+    stats["run_on"] = model_id
 
     step = "[TRAIN]"
     stats["train"] = {}
@@ -117,12 +123,12 @@ def run(
 
     step = "[PREDICT]"
     stats["predict"] = {}
-    predict_from = args.predict_on + relativedelta(day=1)
-    predict_to = args.predict_on + relativedelta(months=+1)
-    predict_to = predict_to + relativedelta(days=-1)
 
     PREDICT_DATASET = SFDataset(
-        date_min=predict_from, date_max=predict_to, fields=conf.VARIABLES
+        date_min=args.predict_on,
+        date_max=args.predict_on[:-2] + "28",
+        fields=conf.VARIABLES,
+        sample_size=conf.PREDICT_SAMPLE_SIZE,
     )
     logging.info(f"{step} - Fetching predict set")
     PREDICT_DATASET.fetch_data()
@@ -134,16 +140,14 @@ def run(
     predictions = fit.predict_proba(PREDICT_DATASET.data)
     PREDICT_DATASET.data["predicted_probability"] = predictions[:, 1]
 
-    logging.info(f"{step} - Exporting data to csv")
-    model_id = datetime.now().strftime("%Y%m%d-%H%M%S")
+    logging.info(f"{step} - Exporting prediction data to csv")
     export_destination = f"predictions-{model_id}.csv"
     PREDICT_DATASET.data[["siren", "siret", "predicted_probability"]].to_csv(
         export_destination, index=False
     )
 
-    with open(f"stats-{model_id}.csv", "wb") as f:
-        w = csv.writer(f)
-        w.writerows(stats.items())
+    with open(f"stats-{model_id}.json", "w") as stats_file:
+        stats_file.write(json.dumps(stats))
 
 
 parser = argparse.ArgumentParser("main.py", description="Run model prediction")

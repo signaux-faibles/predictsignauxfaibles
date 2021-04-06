@@ -116,6 +116,7 @@ TEST_SAMPLE_SIZE = 5_000
 
 # Predict Dataset
 PREDICT_ON = "2020-02-01"
+PREDICT_SAMPLE_SIZE = 5_000  # set to 1_000_000_000 in prod ==> no limit
 
 # Evaluation parameters
 EVAL_BETA = 2
