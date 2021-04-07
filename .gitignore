@@ -136,3 +136,4 @@ variables.json
 
 # ignore model run outputs
 model_runs/*
+.vscode
