@@ -5,10 +5,10 @@ import subprocess
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.preprocessing import StandardScaler
 from sklearn_pandas import DataFrameMapper
 
-from predictsignauxfaibles.pipelines import DEFAULT_PIPELINE
+from predictsignauxfaibles.pipelines import SMALL_PIPELINE
 from predictsignauxfaibles.utils import check_feature
 
 # ENV (default is "develop", can be set to "prod")
@@ -16,7 +16,7 @@ ENV = os.getenv("ENV", "develop")
 
 
 # Model Information
-MODEL_ID = "202103_logreg_full"
+MODEL_ID = "202103_logreg_small"
 MODEL_RUN_DATE = datetime.today()
 MODEL_GIT_SHA = str(
     subprocess.check_output(["git", "rev-parse", "--short", "HEAD"]), encoding="utf-8"
@@ -25,17 +25,6 @@ MODEL_GIT_SHA = str(
 # Variables disponibles en base :
 # https://github.com/signaux-faibles/opensignauxfaibles/master/js/reduce.algo2/docs/variables.json
 VARIABLES = [
-    "financier_court_terme",
-    "interets",
-    "ca",
-    "equilibre_financier",
-    "endettement",
-    "degre_immo_corporelle",
-    "liquidite_reduite",
-    "poids_bfr_exploitation",
-    "productivite_capital_investi",
-    "rentabilite_economique",
-    "rentabilite_nette",
     "cotisation",
     "cotisation_moy12m",
     "montant_part_ouvriere",
@@ -55,15 +44,13 @@ VARIABLES = [
     "effectif",
     "apart_heures_consommees_cumulees",
     "apart_heures_consommees",
-    "paydex_nb_jours",
-    "paydex_nb_jours_past_12",
 ]
 
 # ces variables sont toujours requêtées
 VARIABLES += ["outcome", "periode", "siret", "siren", "time_til_outcome", "code_naf"]
 
 # Model-specific préprocessing
-TRANSFO_PIPELINE = DEFAULT_PIPELINE
+TRANSFO_PIPELINE = SMALL_PIPELINE
 
 # features
 FEATURES = [
@@ -71,19 +58,6 @@ FEATURES = [
     "apart_heures_consommees",
     "ratio_dette",
     "avg_delta_dette_par_effectif",
-    "paydex_group",
-    "paydex_yoy",
-    "financier_court_terme",
-    "interets",
-    "ca",
-    "equilibre_financier",
-    "endettement",
-    "degre_immo_corporelle",
-    "liquidite_reduite",
-    "poids_bfr_exploitation",
-    "productivite_capital_investi",
-    "rentabilite_economique",
-    "rentabilite_nette",
 ]
 
 for feature in FEATURES:
@@ -93,12 +67,11 @@ for feature in FEATURES:
         )
 
 # model
-TO_ONEHOT_ENCODE = ["paydex_group"]
+TO_ONEHOT_ENCODE = []
 TO_SCALE = list(set(FEATURES) - set(TO_ONEHOT_ENCODE))
 
 mapper = DataFrameMapper(
     [
-        (TO_ONEHOT_ENCODE, [OneHotEncoder()]),
         (TO_SCALE, [StandardScaler()]),
     ],
 )

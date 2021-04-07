@@ -7,7 +7,7 @@ import sys
 import logging
 
 from sklearn.metrics import fbeta_score, balanced_accuracy_score
-from predictsignauxfaibles.config import OUTPUT_FOLDER
+from predictsignauxfaibles.config import OUTPUT_FOLDER, IGNORE_NA
 from predictsignauxfaibles.pipelines import run_pipeline
 from predictsignauxfaibles.data import OversampledSFDataset, SFDataset
 
@@ -57,11 +57,13 @@ def evaluate(
     return {"balanced_accuracy": balanced_accuracy, "fbeta": fbeta}
 
 
-def run(): # pylint: disable=too-many-statements,too-many-locals
+def run():  # pylint: disable=too-many-statements,too-many-locals
     """
     Run model
     """
-    logging.info(f"Running Model {conf.MODEL_ID} (commit {conf.MODEL_GIT_SHA})")
+    logging.info(
+        f"Running Model {conf.MODEL_ID} (commit {conf.MODEL_GIT_SHA}) ENV={conf.ENV}"
+    )
     model_stats = {}
     model_id = datetime.now().strftime("%Y%m%d-%H%M%S")
     model_stats["run_on"] = model_id
@@ -79,7 +81,7 @@ def run(): # pylint: disable=too-many-statements,too-many-locals
     train_dataset.fetch_data()
 
     logging.info(f"{step} - Data preprocessing")
-    train_dataset.replace_missing_data().remove_na(ignore=["time_til_outcome"])
+    train_dataset.replace_missing_data().remove_na(ignore=IGNORE_NA)
     train_dataset.data = run_pipeline(train_dataset.data, conf.TRANSFO_PIPELINE)
 
     logging.info(f"{step} - Training on {len(train_dataset)} observations.")
@@ -109,7 +111,7 @@ def run(): # pylint: disable=too-many-statements,too-many-locals
 
     logging.info(f"{step} - Data preprocessing")
     test_dataset.replace_missing_data().remove_na(
-        ignore=["time_til_outcome"]
+        ignore=IGNORE_NA
     ).remove_strong_signals()
     test_dataset.data = run_pipeline(test_dataset.data, conf.TRANSFO_PIPELINE)
     logging.info(f"{step} - Testing on {len(test_dataset)} observations.")
@@ -135,7 +137,7 @@ def run(): # pylint: disable=too-many-statements,too-many-locals
     predict_dataset.fetch_data()
     logging.info(f"{step} - Data preprocessing")
     predict_dataset.replace_missing_data()
-    predict_dataset.remove_na(ignore=["time_til_outcome", "outcome"])
+    predict_dataset.remove_na(ignore=IGNORE_NA + ["outcome"])
     predict_dataset.data = run_pipeline(predict_dataset.data, conf.TRANSFO_PIPELINE)
     logging.info(f"{step} - Predicting on {len(predict_dataset)} observations.")
     predictions = fit.predict_proba(predict_dataset.data)

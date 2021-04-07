@@ -57,4 +57,4 @@ DEFAULT_DATA_VALUES = {
 }
 
 # Columns for which NA should be ignored
-IGNORE_NA = ["time_til_outcome"]
+IGNORE_NA = ["time_til_outcome", "code_naf"]
