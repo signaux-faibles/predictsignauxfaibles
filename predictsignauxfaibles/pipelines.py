@@ -83,7 +83,26 @@ DEFAULT_PIPELINE = [
     ),
 ]
 
-# This is useful for automatic testing
-ALL_PIPELINES = [
-    DEFAULT_PIPELINE,
+SMALL_PIPELINE = [
+    Preprocessor(
+        "Remove Administrations",
+        function=remove_administrations,
+        input=["code_naf"],
+        output=None,
+    ),
+    Preprocessor(
+        "Make `avg_delta_dette_par_effectif`",
+        acoss_make_avg_delta_dette_par_effectif,
+        input=[
+            "effectif",
+            "montant_part_patronale",
+            "montant_part_ouvriere",
+            "montant_part_patronale_past_3",
+            "montant_part_ouvriere_past_3",
+        ],
+        output=["avg_delta_dette_par_effectif"],
+    ),
 ]
+
+# This is useful for automatic testing
+ALL_PIPELINES = [DEFAULT_PIPELINE, SMALL_PIPELINE]

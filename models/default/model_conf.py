@@ -8,7 +8,6 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn_pandas import DataFrameMapper
 
-from predictsignauxfaibles.config import DEFAULT_DATA_VALUES, IGNORE_NA
 from predictsignauxfaibles.pipelines import DEFAULT_PIPELINE
 from predictsignauxfaibles.utils import check_feature
 
@@ -117,7 +116,7 @@ TRAIN_OVERSAMPLING = 0.2
 # Test Dataset
 TEST_FROM = "2018-07-01"
 TEST_TO = "2018-10-31"
-TEST_SAMPLE_SIZE = 1_000_000 if ENV == "prod" else 5_000
+TEST_SAMPLE_SIZE = 250_000 if ENV == "prod" else 5_000
 
 # Predict Dataset
 PREDICT_ON = "2020-02-01"
