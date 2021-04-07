@@ -6,8 +6,7 @@ from pathlib import Path
 import sys
 import logging
 
-from sklearn.metrics import fbeta_score
-from sklearn.metrics import balanced_accuracy_score
+from sklearn.metrics import fbeta_score, balanced_accuracy_score
 from predictsignauxfaibles.config import OUTPUT_FOLDER
 from predictsignauxfaibles.pipelines import run_pipeline
 from predictsignauxfaibles.data import OversampledSFDataset, SFDataset
@@ -20,7 +19,7 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level="I
 logging.getLogger("sklearn_pandas").setLevel(logging.WARNING)
 
 
-def load_conf(args):  # pylint: disable=redefined-outer-name
+def load_conf(args):
     """
     Loads a model configuration from a argparse.Namespace
     containing a model name and a configuration filename
@@ -58,7 +57,7 @@ def evaluate(
     return {"balanced_accuracy": balanced_accuracy, "fbeta": fbeta}
 
 
-def run():  # pylint: disable=redefined-outer-name,too-many-statements,too-many-locals
+def run(): # pylint: disable=too-many-statements,too-many-locals
     """
     Run model
     """
