@@ -2,12 +2,12 @@ import argparse
 from datetime import datetime
 import importlib.util
 import json
-import logging
 from pathlib import Path
 import sys
+import logging
 
-
-from sklearn.metrics import fbeta_score, balanced_accuracy_score
+from sklearn.metrics import fbeta_score
+from sklearn.metrics import balanced_accuracy_score
 from predictsignauxfaibles.config import OUTPUT_FOLDER
 from predictsignauxfaibles.pipelines import run_pipeline
 from predictsignauxfaibles.data import OversampledSFDataset, SFDataset
@@ -58,25 +58,23 @@ def evaluate(
     return {"balanced_accuracy": balanced_accuracy, "fbeta": fbeta}
 
 
-def run(
-    args,
-):  # pylint: disable=redefined-outer-name,too-many-statements,too-many-locals
+def run():  # pylint: disable=redefined-outer-name,too-many-statements,too-many-locals
     """
     Run model
     """
     logging.info(f"Running Model {conf.MODEL_ID} (commit {conf.MODEL_GIT_SHA})")
-    model_stats = vars(args)
+    model_stats = {}
     model_id = datetime.now().strftime("%Y%m%d-%H%M%S")
     model_stats["run_on"] = model_id
 
     step = "[TRAIN]"
     model_stats["train"] = {}
     train_dataset = OversampledSFDataset(
-        args.train_proportion_positive_class,
-        date_min=args.train_from,
-        date_max=args.train_to,
+        conf.TRAIN_OVERSAMPLING,
+        date_min=conf.TRAIN_FROM,
+        date_max=conf.TRAIN_TO,
         fields=conf.VARIABLES,
-        sample_size=args.train_spl_size,
+        sample_size=conf.TRAIN_SAMPLE_SIZE,
     )
     logging.info(f"{step} - Fetching train set")
     train_dataset.fetch_data()
@@ -99,10 +97,10 @@ def run(
     step = "[TEST]"
     model_stats["test"] = {}
     test_dataset = SFDataset(
-        date_min=args.test_from,
-        date_max=args.test_to,
+        date_min=conf.TEST_FROM,
+        date_max=conf.TEST_TO,
         fields=conf.VARIABLES,
-        sample_size=args.test_spl_size,
+        sample_size=conf.TEST_SAMPLE_SIZE,
     )
     logging.info(f"{step} - Fetching test set")
     test_dataset.fetch_data()
@@ -129,8 +127,8 @@ def run(
     model_stats["predict"] = {}
 
     predict_dataset = SFDataset(
-        date_min=args.predict_on,
-        date_max=args.predict_on[:-2] + "28",
+        date_min=conf.PREDICT_ON,
+        date_max=conf.PREDICT_ON[:-2] + "28",
         fields=conf.VARIABLES,
         sample_size=conf.PREDICT_SAMPLE_SIZE,
     )
@@ -171,67 +169,6 @@ conf_args = parser.parse_args()
 
 conf = load_conf(conf_args)
 
-parser.add_argument(
-    "--train_sample",
-    type=int,
-    dest="train_spl_size",
-    default=conf.TRAIN_SAMPLE_SIZE,
-    help="Train the model on data from this date",
-)
-parser.add_argument(
-    "--test_sample",
-    type=int,
-    dest="test_spl_size",
-    default=conf.TEST_SAMPLE_SIZE,
-    help="Train the model on data from this date",
-)
-parser.add_argument(
-    "--oversampling",
-    type=float,
-    dest="train_proportion_positive_class",
-    default=conf.TRAIN_OVERSAMPLING,
-    help="""
-    Enforces the ratio of positive observations
-    (entreprises en défaillance) to be the specified ratio
-    """,
-)
-
-parser.add_argument(
-    "--train_from",
-    type=str,
-    default=conf.TRAIN_FROM,
-    help="Train the model on data from this date",
-)
-parser.add_argument(
-    "--train_to",
-    type=str,
-    default=conf.TRAIN_TO,
-    help="Train the model on data up to this date",
-)
-parser.add_argument(
-    "--test_from",
-    type=str,
-    default=conf.TEST_FROM,
-    help="Test the model on data from this date",
-)
-parser.add_argument(
-    "--test_to",
-    type=str,
-    default=conf.TEST_TO,
-    help="Test the model on data up to this date",
-)
-parser.add_argument(
-    "--predict_on",
-    type=str,
-    default=conf.PREDICT_ON,
-    help="""
-    Predict on all companies for the month specified
-    To predict on April 2021, provide any date such as '01-04-2021'
-    """,
-)
-
-args = parser.parse_args()
-
 
 if __name__ == "__main__":
-    run(args)
+    run()
