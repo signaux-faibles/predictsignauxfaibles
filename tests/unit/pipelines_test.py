@@ -11,12 +11,7 @@ from predictsignauxfaibles.pipelines import (
 
 from predictsignauxfaibles.preprocessors import Preprocessor
 
-from tests.fake_data.dataframes import (
-    df_test_acoss,
-    df_test_paydex,
-    df_test_full,
-    df_test_code_naf,
-)
+from tests.fake_data.dataframes import df_test_full
 
 
 @pytest.mark.parametrize("pipeline", ALL_PIPELINES)

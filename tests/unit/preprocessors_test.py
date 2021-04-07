@@ -1,8 +1,6 @@
 # pylint: disable=missing-function-docstring
 import pandas as pd
-import pytest
 from predictsignauxfaibles.preprocessors import (
-    Preprocessor,
     acoss_make_avg_delta_dette_par_effectif,
     paydex_make_groups,
     paydex_make_yoy,
@@ -12,7 +10,6 @@ from predictsignauxfaibles.preprocessors import (
 from tests.fake_data.dataframes import (
     df_test_acoss,
     df_test_paydex,
-    df_test_full,
     df_test_code_naf,
 )
 

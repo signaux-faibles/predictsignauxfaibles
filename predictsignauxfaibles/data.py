@@ -7,7 +7,7 @@ from pymongo.cursor import Cursor
 
 import predictsignauxfaibles.config as config
 from predictsignauxfaibles.logging import CommandLogger
-from predictsignauxfaibles.utils import MongoDBQuery, parse_yml_config
+from predictsignauxfaibles.utils import MongoDBQuery
 from predictsignauxfaibles.decorators import is_random
 
 
@@ -82,24 +82,6 @@ class SFDataset:
             self._mongo_database = None
             self._mongo_collection = None
 
-    @classmethod
-    def from_config_file(cls, path: str, mode: str = "train"):
-        """
-        Instantiate a SFDataset object via a yaml config file
-        Args:
-            path: path to config file (typically in ./models/{version}/model.yml)
-            mode: "train" or "predict". Whether the dataset is for training or for predicting.
-        """
-        conf = parse_yml_config(path)
-        if mode not in {"train", "predict"}:
-            raise ValueError("'mode' must be one of 'train' or 'predict")
-        return cls(
-            date_min=conf[f"{mode}_on"]["start_date"],
-            date_max=conf[f"{mode}_on"]["end_date"],
-            fields=conf["features"] + [conf["target"]] + ["siret", "periode"],
-            sample_size=conf[f"{mode}_on"].get("sample_size", 0),
-        )
-
     def _make_pipeline(self):
         """
         Build Mongo Aggregate pipeline for dataset and store it in the `mongo_pipeline` attribute
@@ -165,42 +147,7 @@ class SFDataset:
             explain=True,
         )
 
-    def prepare_data(
-        self,
-        remove_strong_signals: bool = False,
-        defaults_map: dict = None,
-        cols_ignore_na: list = None,
-    ):
-        """
-        Run data preparation operations on the dataset.
-        remove_strong_signals drops observations with time_til_outcome <= 0
-         (i.e. firms that are already in default).
-        """
-        assert isinstance(
-            self.data, pd.DataFrame
-        ), "DataFrame not found. Please fetch data first."
-
-        if defaults_map is None:
-            defaults_map = config.DEFAULT_DATA_VALUES
-
-        if cols_ignore_na is None:
-            cols_ignore_na = config.IGNORE_NA
-
-        logging.info("Replacing missing data with default values")
-        self._replace_missing_data(defaults_map)
-
-        logging.info("Drop observations with missing required fields.")
-        self._remove_na(cols_ignore_na)
-
-        if remove_strong_signals:
-            logging.info("Removing 'strong signals'.")
-            self._remove_strong_signals()
-
-        logging.info("Resetting index for DataFrame.")
-        self.data.reset_index(drop=True, inplace=True)
-        return self
-
-    def _remove_strong_signals(self):
+    def remove_strong_signals(self):
         """
         Strong signals is when a firm is already in default (time_til_outcome <= 0)
         """
@@ -209,8 +156,10 @@ class SFDataset:
         ), "The `time_til_outcome` column is needed in order to remove strong signals."
 
         self.data = self.data[~(self.data["time_til_outcome"] <= 0)]
+        self.data.reset_index(drop=True, inplace=True)
+        return self
 
-    def _replace_missing_data(self, defaults_map: dict = None):
+    def replace_missing_data(self, defaults_map: dict = None):
         """
         Replace missing data with defaults defined in project config
         Args:
@@ -228,8 +177,10 @@ class SFDataset:
             except KeyError:
                 logging.debug(f"Column {column} not in dataset")
                 continue
+        self.data.reset_index(drop=True, inplace=True)
+        return self
 
-    def _remove_na(self, ignore: list):
+    def remove_na(self, ignore: list):
         """
         Remove all observations with missing values.
         Args:
@@ -250,6 +201,22 @@ class SFDataset:
         logging.info(f"Number of observations before: {len(self.data.index)}")
         self.data.dropna(subset=cols_drop_na, inplace=True)
         logging.info(f"Number of observations after: {len(self.data.index)}")
+        self.data.reset_index(drop=True, inplace=True)
+        return self
+
+    def remove_siren(self, siren_list: list):
+        """
+        Removes all observations corresponding to
+        one of the siren provided as input.
+        Args:
+            siren_list: a list of siren to be removed from the data.
+        """
+        orig_length = len(self)
+        self.data = self.data[~self.data["siren"].isin(siren_list)]
+        post_length = len(self)
+        logging.info(
+            f"Removed {orig_length - post_length} from data based on SIREN blacklist"
+        )
 
     def __repr__(self):
         out = f"""
@@ -316,3 +283,4 @@ class OversampledSFDataset(SFDataset):
         false_data = self.data
         full_data = true_data.append(false_data)
         self.data = full_data.sample(frac=1).reset_index(drop=True)
+        return self

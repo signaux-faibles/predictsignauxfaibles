@@ -1,8 +1,0 @@
----
-version: 1.0.0
-target: outcome
-train_on:
-  start_date: "2015-01-01"
-  end_date: "2018-06-30"
-  sample_size: 10000
-predict_on: "2021-01-31"
