@@ -62,6 +62,7 @@ def load_datasets_from_conf(args_ns, conf):
     }
 
     stats = {}
+
     args_dict = vars(args_ns)
     for (arg, dest) in args_to_attrs.items():
         set_if_not_none(datasets[dest[0]], dest[1], args_dict[arg])
@@ -243,7 +244,7 @@ predict_args.add_argument(
     """,
 )
 
-run_model_args = parser.parse_args()
+model_args = parser.parse_args()
 
 if __name__ == "__main__":
-    run(run_model_args)
+    run(model_args)
