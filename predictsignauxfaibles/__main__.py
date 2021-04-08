@@ -28,7 +28,7 @@ args_to_attrs = {
     "train_to": ("train", "date_max"),
     "test_from": ("test", "date_min"),
     "test_to": ("test", "date_max"),
-    "predict_on": ("predict", "date_min")
+    "predict_on": ("predict", "date_min"),
 }
 
 
@@ -61,9 +61,9 @@ def load_datasets_from_conf(args_ns, conf):
         "test": conf.TEST_DATASET,
         "predict": conf.PREDICT_DATASET,
     }
-    
+
     stats = {}
-    
+
     args_dict = vars(args_ns)
     for (arg, dest) in args_to_attrs.items():
         set_if_not_none(datasets[dest[0]], dest[1], args_dict[arg])
@@ -104,7 +104,7 @@ def run(
     datasets, model_stats = load_datasets_from_conf(args, conf)
     (train_dataset, test_dataset, predict_dataset) = datasets
     model_stats["run_on"] = model_id
-    
+
     pdb.set_trace()
     step = "[TRAIN]"
     model_stats["train"] = {}
