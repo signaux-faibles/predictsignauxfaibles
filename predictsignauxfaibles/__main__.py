@@ -5,7 +5,6 @@ import json
 from pathlib import Path
 import sys
 import logging
-import pdb
 
 from sklearn.metrics import fbeta_score, balanced_accuracy_score
 from predictsignauxfaibles.config import OUTPUT_FOLDER
@@ -63,7 +62,6 @@ def load_datasets_from_conf(args_ns, conf):
     }
 
     stats = {}
-
     args_dict = vars(args_ns)
     for (arg, dest) in args_to_attrs.items():
         set_if_not_none(datasets[dest[0]], dest[1], args_dict[arg])
@@ -105,7 +103,6 @@ def run(
     (train_dataset, test_dataset, predict_dataset) = datasets
     model_stats["run_on"] = model_id
 
-    pdb.set_trace()
     step = "[TRAIN]"
     model_stats["train"] = {}
     logging.info(f"{step} - Fetching train set ({train_dataset.sample_size} samples)")
