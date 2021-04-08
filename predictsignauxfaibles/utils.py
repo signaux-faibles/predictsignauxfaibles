@@ -163,7 +163,7 @@ def check_feature(feature_name: str, variables: list, pipeline: List[NamedTuple]
     return is_ok
 
 
-def fill_if_not_none(obj, attr, val):
+def set_if_not_none(obj, attr, val):
     """
     Sets the attribute of an object with some value if that value is not null
     Args:

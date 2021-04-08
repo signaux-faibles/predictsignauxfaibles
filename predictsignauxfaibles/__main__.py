@@ -5,11 +5,12 @@ import json
 from pathlib import Path
 import sys
 import logging
+import pdb
 
 from sklearn.metrics import fbeta_score, balanced_accuracy_score
 from predictsignauxfaibles.config import OUTPUT_FOLDER
 from predictsignauxfaibles.pipelines import run_pipeline
-from predictsignauxfaibles.utils import fill_if_not_none
+from predictsignauxfaibles.utils import set_if_not_none
 
 sys.path.append("../")
 
@@ -27,6 +28,7 @@ args_to_attrs = {
     "train_to": ("train", "date_max"),
     "test_from": ("test", "date_min"),
     "test_to": ("test", "date_max"),
+    "predict_on": ("predict", "date_min")
 }
 
 
@@ -59,16 +61,18 @@ def load_datasets_from_conf(args_ns, conf):
         "test": conf.TEST_DATASET,
         "predict": conf.PREDICT_DATASET,
     }
-
+    
+    stats = {}
+    
     args_dict = vars(args_ns)
     for (arg, dest) in args_to_attrs.items():
-        fill_if_not_none(datasets[dest[0]], dest[1], args_dict[arg])
+        set_if_not_none(datasets[dest[0]], dest[1], args_dict[arg])
+        stats[arg] = getattr(datasets[dest[0]], dest[1])
 
     if args.predict_on is not None:
-        datasets["predict"].date_min = args.predict_on
         datasets["predict"].date_max = args.predict_on[:-2] + "28"
 
-    return (datasets["train"], datasets["test"], datasets["predict"])
+    return (datasets["train"], datasets["test"], datasets["predict"]), stats
 
 
 def evaluate(
@@ -95,15 +99,16 @@ def run(
     """
     conf = load_conf(args)
     logging.info(f"Running Model {conf.MODEL_ID} (commit {conf.MODEL_GIT_SHA})")
-    model_stats = vars(args)
     model_id = datetime.now().strftime("%Y%m%d-%H%M%S")
+
+    datasets, model_stats = load_datasets_from_conf(args, conf)
+    (train_dataset, test_dataset, predict_dataset) = datasets
     model_stats["run_on"] = model_id
-
-    (train_dataset, test_dataset, predict_dataset) = load_datasets_from_conf(args, conf)
-
+    
+    pdb.set_trace()
     step = "[TRAIN]"
     model_stats["train"] = {}
-    logging.info(f"{step} - Fetching train set")
+    logging.info(f"{step} - Fetching train set ({train_dataset.sample_size} samples)")
     train_dataset.fetch_data()
 
     logging.info(f"{step} - Data preprocessing")
@@ -123,7 +128,7 @@ def run(
 
     step = "[TEST]"
     model_stats["test"] = {}
-    logging.info(f"{step} - Fetching test set")
+    logging.info(f"{step} - Fetching test set ({test_dataset.sample_size} samples)")
     test_dataset.fetch_data()
 
     train_siren_set = train_dataset.data["siren"].unique().tolist()
