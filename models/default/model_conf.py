@@ -9,7 +9,6 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn_pandas import DataFrameMapper
 
 from predictsignauxfaibles.data import SFDataset, OversampledSFDataset
-from predictsignauxfaibles.config import DEFAULT_DATA_VALUES, IGNORE_NA
 from predictsignauxfaibles.pipelines import DEFAULT_PIPELINE
 from predictsignauxfaibles.utils import check_feature
 
