@@ -224,6 +224,8 @@ class SFDataset:
         logging.info(
             f"Removed {orig_length - post_length} from data based on SIREN blacklist"
         )
+        self.data.reset_index(drop=True, inplace=True)
+        return self
 
     def __repr__(self):
         out = f"""
