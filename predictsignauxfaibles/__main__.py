@@ -8,7 +8,7 @@ import logging
 from types import ModuleType
 
 from sklearn.metrics import fbeta_score, balanced_accuracy_score
-from predictsignauxfaibles.config import OUTPUT_FOLDER
+from predictsignauxfaibles.config import OUTPUT_FOLDER, IGNORE_NA
 from predictsignauxfaibles.pipelines import run_pipeline
 from predictsignauxfaibles.utils import set_if_not_none
 
@@ -118,7 +118,7 @@ def run(
     train_dataset.fetch_data()
 
     logging.info(f"{step} - Data preprocessing")
-    train_dataset.replace_missing_data().remove_na(ignore=["time_til_outcome"])
+    train_dataset.replace_missing_data().remove_na(ignore=IGNORE_NA)
     train_dataset.data = run_pipeline(train_dataset.data, conf.TRANSFO_PIPELINE)
 
     logging.info(f"{step} - Training on {len(train_dataset)} observations.")
@@ -142,7 +142,7 @@ def run(
 
     logging.info(f"{step} - Data preprocessing")
     test_dataset.replace_missing_data().remove_na(
-        ignore=["time_til_outcome"]
+        ignore=IGNORE_NA
     ).remove_strong_signals()
     test_dataset.data = run_pipeline(test_dataset.data, conf.TRANSFO_PIPELINE)
     logging.info(f"{step} - Testing on {len(test_dataset)} observations.")
@@ -162,7 +162,7 @@ def run(
     predict_dataset.fetch_data()
     logging.info(f"{step} - Data preprocessing")
     predict_dataset.replace_missing_data()
-    predict_dataset.remove_na(ignore=["time_til_outcome", "outcome"])
+    predict_dataset.remove_na(ignore=IGNORE_NA)
     predict_dataset.data = run_pipeline(predict_dataset.data, conf.TRANSFO_PIPELINE)
     logging.info(f"{step} - Predicting on {len(predict_dataset)} observations.")
     predictions = fit.predict_proba(predict_dataset.data)
@@ -188,7 +188,7 @@ parser.add_argument(
     "--model_name",
     type=str,
     default="default",
-    help="The model to use for prediction. If not provided, models default will be used",
+    help="The model to use for prediction. If not provided, models 'default' will be used",
 )
 
 train_args = parser.add_argument_group("Train dataset")
@@ -248,7 +248,7 @@ predict_args.add_argument(
     type=str,
     help="""
     Predict on all companies for the month specified.
-    To predict on April 2021, provide any date such as '01-04-2021'
+    To predict on April 2021, provide any date such as '2021-04-01'
     """,
 )
 
