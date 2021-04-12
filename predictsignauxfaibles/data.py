@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 import pandas as pd
 from pymongo import MongoClient, monitoring
@@ -16,28 +15,34 @@ monitoring.register(CommandLogger())  # loglevel is debug
 
 class SFDataset:
     """
-    Retrieve a signaux faibles dataset.
+    Retrieve a Signaux Faibles dataset.
+    All arguments are optional. The default is a random sample of 1000 observations.
+
+    NB: filtering on categorical variables (e.g. SIREN) may cause slow queries
+     as our database is not optimized for such queries.
+
     Args:
         date_min: first period to include, in the 'YYYY-MM-DD' format. Default is first.
         date_max: first period to exclude, in the 'YYYY-MM-DD' format Default is latest.
         fields: which fields of the Features collection to retrieve. Default is all.
-        sample_size: max number of (siret x period) rows to retrieve. Default is all.
-        sirets: a list of SIRET to select.
+        sample_size: max number of (siret x period) rows to retrieve. Default is 1000.
         outcome: restrict query to firms that fall in a specific outcome (True / False)
+        sirets: a list of SIRET to select
+        sirens: a list of SIREN to select
         min_effectif: min number of employees for firm to be in the sample (defaults to your .env)
-
+        **categorical_filters can be any filter in the form `field = ["a", "b", "c"]`
     """
 
     def __init__(  # pylint: disable=too-many-arguments
         self,
         date_min: str = "1970-01-01",
         date_max: str = "3000-01-01",
-        fields: List = None,
+        fields: list = None,
         sample_size: int = 1_000,
-        min_effectif: int = "default",
-        sirets: List = None,
-        sirens: List = None,
+        min_effectif: int = None,
         outcome: bool = None,
+        sirets: list = None,
+        sirens: list = None,
         **categorical_filters,
     ):
         self._mongo_client = MongoClient(host=config.MONGODB_PARAMS.url)
@@ -50,15 +55,15 @@ class SFDataset:
         self.date_max = date_max
         self.fields = fields
         self.sample_size = sample_size
-        self.min_effectif = (
-            config.MIN_EFFECTIF if min_effectif == "default" else min_effectif
-        )
+        self.min_effectif = config.MIN_EFFECTIF if not min_effectif else min_effectif
         self.sirets = sirets
         self.sirens = sirens
         self.outcome = outcome
 
-        if categorical_filters:
-            logging.warning("Queries using additional filters usually take longer.")
+        if categorical_filters or self.sirens or self.sirets:
+            logging.warning(
+                "Queries using additional filters usually take longer (see function docstring)"
+            )
         self.categorical_filters = categorical_filters
 
         self.mongo_pipeline = MongoDBQuery()
@@ -84,7 +89,8 @@ class SFDataset:
 
     def _make_pipeline(self):
         """
-        Build Mongo Aggregate pipeline for dataset and store it in the `mongo_pipeline` attribute
+        Build MongoDB Aggregate pipeline for dataset
+         and store it in the `mongo_pipeline` attribute
         """
         self.mongo_pipeline.reset()
 
@@ -137,7 +143,8 @@ class SFDataset:
 
     def explain(self):
         """
-        Explain MongoDB query plan
+        Explain MongoDB query plan for Dataset
+         This is useful for debugging a long running MongoDB job.
         """
         self._make_pipeline()
         return self._mongo_database.command(
@@ -251,6 +258,7 @@ class OversampledSFDataset(SFDataset):
     Helper class to oversample a SFDataset
     Args:
         proportion_positive_class: the desired proportion of firms for which outcome = True
+    All other arguments are documented in the SFDataset docstring
     """
 
     def __init__(self, proportion_positive_class: float, **kwargs):
