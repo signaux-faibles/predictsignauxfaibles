@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import sys
 import logging
+from types import ModuleType
 
 from sklearn.metrics import fbeta_score, balanced_accuracy_score
 from predictsignauxfaibles.config import OUTPUT_FOLDER
@@ -18,7 +19,7 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level="I
 # Mute logs from sklean_pandas
 logging.getLogger("sklearn_pandas").setLevel(logging.WARNING)
 
-args_to_attrs = {
+ARGS_TO_ATTRS = {
     "train_spl_size": ("train", "sample_size"),
     "test_spl_size": ("test", "sample_size"),
     "predict_spl_size": ("predict", "sample_size"),
@@ -31,7 +32,7 @@ args_to_attrs = {
 }
 
 
-def load_conf(args):  # pylint: disable=redefined-outer-name
+def load_conf(args: argparse.Namespace):  # pylint: disable=redefined-outer-name
     """
     Loads a model configuration from a argparse.Namespace
     containing a model name
@@ -51,9 +52,14 @@ def load_conf(args):  # pylint: disable=redefined-outer-name
     return model_conf
 
 
-def load_datasets_from_conf(args_ns, conf):
+def load_datasets_from_conf(args_ns: argparse.Namespace, conf: ModuleType):
     """
     Configures train, test and predict dataset from user-provided options when pertaining.
+    Args:
+      args_ns: a argpast Namespace object containing
+      the custom attributes to be used for training, testing and/or prediction
+      conf: the model configuration module containing default parameters,
+      to be overwritten by the content of args_ns
     """
     datasets = {
         "train": conf.TRAIN_DATASET,
@@ -64,7 +70,7 @@ def load_datasets_from_conf(args_ns, conf):
     stats = {}
 
     args_dict = vars(args_ns)
-    for (arg, dest) in args_to_attrs.items():
+    for (arg, dest) in ARGS_TO_ATTRS.items():
         set_if_not_none(datasets[dest[0]], dest[1], args_dict[arg])
         stats[arg] = getattr(datasets[dest[0]], dest[1])
 
@@ -97,7 +103,9 @@ def run(
     Run model
     """
     conf = load_conf(args)
-    logging.info(f"Running Model {conf.MODEL_ID} (commit {conf.MODEL_GIT_SHA})")
+    logging.info(
+        f"Running Model {conf.MODEL_ID} (commit {conf.MODEL_GIT_SHA}) ENV={conf.ENV}"
+    )
     model_id = datetime.now().strftime("%Y%m%d-%H%M%S")
 
     datasets, model_stats = load_datasets_from_conf(args, conf)
