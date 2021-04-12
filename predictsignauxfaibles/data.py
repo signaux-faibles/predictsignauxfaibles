@@ -33,7 +33,7 @@ class SFDataset:
         date_min: str = "1970-01-01",
         date_max: str = "3000-01-01",
         fields: List = None,
-        sample_size: int = 0,  # a sample size of 0 means all data is retrieved
+        sample_size: int = 1_000,
         min_effectif: int = "default",
         sirets: List = None,
         sirens: List = None,
