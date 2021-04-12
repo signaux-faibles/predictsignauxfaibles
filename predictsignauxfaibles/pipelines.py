@@ -21,6 +21,8 @@ class MissingDataError(Exception):
 def run_pipeline(data: pd.DataFrame, pipeline: List[namedtuple]):
     """
     Run a pipeline of Preprocessor objects on a dataframe
+    Args:
+        pipeline: a list of Preprocessor objects (see predictsignauxfaibles.preprocessors)
     """
     logging.info("Checking that input columns are all there.")
     for preprocessor in pipeline:
