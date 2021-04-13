@@ -5,11 +5,13 @@ import json
 from pathlib import Path
 import sys
 import logging
+from types import ModuleType
 
 from sklearn.metrics import fbeta_score, balanced_accuracy_score
 from predictsignauxfaibles.config import OUTPUT_FOLDER, IGNORE_NA
 from predictsignauxfaibles.pipelines import run_pipeline
-from predictsignauxfaibles.data import OversampledSFDataset, SFDataset
+from predictsignauxfaibles.utils import set_if_not_none
+from predictsignauxfaibles.data import SFDataset
 
 sys.path.append("../")
 
@@ -18,11 +20,23 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level="I
 # Mute logs from sklean_pandas
 logging.getLogger("sklearn_pandas").setLevel(logging.WARNING)
 
+ARGS_TO_ATTRS = {
+    "train_spl_size": ("train", "sample_size"),
+    "test_spl_size": ("test", "sample_size"),
+    "predict_spl_size": ("predict", "sample_size"),
+    "train_proportion_positive_class": ("train", "proportion_positive_class"),
+    "train_from": ("train", "date_min"),
+    "train_to": ("train", "date_max"),
+    "test_from": ("test", "date_min"),
+    "test_to": ("test", "date_max"),
+    "predict_on": ("predict", "date_min"),
+}
 
-def load_conf(args):
+
+def load_conf(args: argparse.Namespace):  # pylint: disable=redefined-outer-name
     """
     Loads a model configuration from a argparse.Namespace
-    containing a model name and a configuration filename
+    containing a model name
     Args:
         conf_args: a argparse.Namespace object containing attributes
             model_name
@@ -39,8 +53,56 @@ def load_conf(args):
     return model_conf
 
 
+def get_train_test_predict_datasets(args_ns: argparse.Namespace, conf: ModuleType):
+    """
+    Configures train, test and predict dataset from user-provided options when pertaining.
+    Args:
+      args_ns: a argpast Namespace object containing
+      the custom attributes to be used for training, testing and/or prediction
+      conf: the model configuration module containing default parameters,
+      to be overwritten by the content of args_ns
+    Returns:
+      train: a SFDataset object containing the training data
+      test: a SFDataset object containing the test data
+      predict: a SFDataset object containing the data to predict on
+    """
+    datasets = {
+        "train": conf.TRAIN_DATASET,
+        "test": conf.TEST_DATASET,
+        "predict": conf.PREDICT_DATASET,
+    }
+
+    args_dict = vars(args_ns)
+    for (arg, dest) in ARGS_TO_ATTRS.items():
+        set_if_not_none(datasets[dest[0]], dest[1], args_dict[arg])
+
+    if args_ns.predict_on is not None:
+        datasets["predict"].date_max = args_ns.predict_on[:-2] + "28"
+
+    return datasets["train"], datasets["test"], datasets["predict"]
+
+
+def make_stats(train: SFDataset, test: SFDataset, predict: SFDataset):
+    """
+    Initialises a dictionary containing model run stats for logging purposes
+    Args:
+      train: a SFDataset object containing the training data
+      test: a SFDataset object containing the test data
+      predict: a SFDataset object containing the data to predict on
+    Returns:
+      stats: a dictionnary containing model run parameters
+    """
+    stats = {}
+    datasets = {"train": train, "test": test, "predict": predict}
+
+    for (arg, dest) in ARGS_TO_ATTRS.items():
+        stats[arg] = getattr(datasets[dest[0]], dest[1])
+
+    return stats
+
+
 def evaluate(
-    model, dataset
+    model, dataset, beta
 ):  # To be turned into a SFModel method when refactoring models
     """
     Returns evaluation metrics of model evaluated on df
@@ -51,43 +113,39 @@ def evaluate(
     balanced_accuracy = balanced_accuracy_score(
         dataset.data["outcome"], model.predict(dataset.data)
     )
-    fbeta = fbeta_score(
-        dataset.data["outcome"], model.predict(dataset.data), beta=conf.EVAL_BETA
-    )
+    fbeta = fbeta_score(dataset.data["outcome"], model.predict(dataset.data), beta=beta)
     return {"balanced_accuracy": balanced_accuracy, "fbeta": fbeta}
 
 
-def run():  # pylint: disable=too-many-statements,too-many-locals
+def run(
+    args,
+):  # pylint: disable=too-many-statements,too-many-locals
     """
     Run model
     """
+    conf = load_conf(args)
     logging.info(
         f"Running Model {conf.MODEL_ID} (commit {conf.MODEL_GIT_SHA}) ENV={conf.ENV}"
     )
-    model_stats = {}
     model_id = datetime.now().strftime("%Y%m%d-%H%M%S")
+
+    train, test, predict = get_train_test_predict_datasets(args, conf)
+    model_stats = make_stats(train, test, predict)
     model_stats["run_on"] = model_id
 
     step = "[TRAIN]"
     model_stats["train"] = {}
-    train_dataset = OversampledSFDataset(
-        conf.TRAIN_OVERSAMPLING,
-        date_min=conf.TRAIN_FROM,
-        date_max=conf.TRAIN_TO,
-        fields=conf.VARIABLES,
-        sample_size=conf.TRAIN_SAMPLE_SIZE,
-    )
-    logging.info(f"{step} - Fetching train set")
-    train_dataset.fetch_data()
+    logging.info(f"{step} - Fetching train set ({train.sample_size} samples)")
+    train.fetch_data()
 
     logging.info(f"{step} - Data preprocessing")
-    train_dataset.replace_missing_data().remove_na(ignore=IGNORE_NA)
-    train_dataset.data = run_pipeline(train_dataset.data, conf.TRANSFO_PIPELINE)
+    train.replace_missing_data().remove_na(ignore=IGNORE_NA)
+    train.data = run_pipeline(train.data, conf.TRANSFO_PIPELINE)
 
-    logging.info(f"{step} - Training on {len(train_dataset)} observations.")
-    fit = conf.MODEL_PIPELINE.fit(train_dataset.data, train_dataset.data["outcome"])
+    logging.info(f"{step} - Training on {len(train)} observations.")
+    fit = conf.MODEL_PIPELINE.fit(train.data, train.data["outcome"])
 
-    eval_metrics = evaluate(fit, train_dataset)
+    eval_metrics = evaluate(fit, train, conf.EVAL_BETA)
     balanced_accuracy_train = eval_metrics.get("balanced_accuracy")
     fbeta_train = eval_metrics.get("fbeta")
     logging.info(f"{step} - Balanced_accuracy: {balanced_accuracy_train}")
@@ -97,26 +155,18 @@ def run():  # pylint: disable=too-many-statements,too-many-locals
 
     step = "[TEST]"
     model_stats["test"] = {}
-    test_dataset = SFDataset(
-        date_min=conf.TEST_FROM,
-        date_max=conf.TEST_TO,
-        fields=conf.VARIABLES,
-        sample_size=conf.TEST_SAMPLE_SIZE,
-    )
-    logging.info(f"{step} - Fetching test set")
-    test_dataset.fetch_data()
+    logging.info(f"{step} - Fetching test set ({test.sample_size} samples)")
+    test.fetch_data()
 
-    train_siren_set = train_dataset.data["siren"].unique().tolist()
-    test_dataset.remove_siren(train_siren_set)
+    train_siren_set = train.data["siren"].unique().tolist()
+    test.remove_siren(train_siren_set)
 
     logging.info(f"{step} - Data preprocessing")
-    test_dataset.replace_missing_data().remove_na(
-        ignore=IGNORE_NA
-    ).remove_strong_signals()
-    test_dataset.data = run_pipeline(test_dataset.data, conf.TRANSFO_PIPELINE)
-    logging.info(f"{step} - Testing on {len(test_dataset)} observations.")
+    test.replace_missing_data().remove_na(ignore=IGNORE_NA).remove_strong_signals()
+    test.data = run_pipeline(test.data, conf.TRANSFO_PIPELINE)
+    logging.info(f"{step} - Testing on {len(test)} observations.")
 
-    eval_metrics = evaluate(fit, test_dataset)
+    eval_metrics = evaluate(fit, test, conf.EVAL_BETA)
     balanced_accuracy_test = eval_metrics.get("balanced_accuracy")
     fbeta_test = eval_metrics.get("fbeta")
     logging.info(f"{step} - Balanced_accuracy: {balanced_accuracy_test}")
@@ -127,21 +177,15 @@ def run():  # pylint: disable=too-many-statements,too-many-locals
     step = "[PREDICT]"
     model_stats["predict"] = {}
 
-    predict_dataset = SFDataset(
-        date_min=conf.PREDICT_ON,
-        date_max=conf.PREDICT_ON[:-2] + "28",
-        fields=conf.VARIABLES,
-        sample_size=conf.PREDICT_SAMPLE_SIZE,
-    )
     logging.info(f"{step} - Fetching predict set")
-    predict_dataset.fetch_data()
+    predict.fetch_data()
     logging.info(f"{step} - Data preprocessing")
-    predict_dataset.replace_missing_data()
-    predict_dataset.remove_na(ignore=IGNORE_NA + ["outcome"])
-    predict_dataset.data = run_pipeline(predict_dataset.data, conf.TRANSFO_PIPELINE)
-    logging.info(f"{step} - Predicting on {len(predict_dataset)} observations.")
-    predictions = fit.predict_proba(predict_dataset.data)
-    predict_dataset.data["predicted_probability"] = predictions[:, 1]
+    predict.replace_missing_data()
+    predict.remove_na(ignore=IGNORE_NA)
+    predict.data = run_pipeline(predict.data, conf.TRANSFO_PIPELINE)
+    logging.info(f"{step} - Predicting on {len(predict)} observations.")
+    predictions = fit.predict_proba(predict.data)
+    predict.data["predicted_probability"] = predictions[:, 1]
 
     logging.info(f"{step} - Exporting prediction data to csv")
 
@@ -149,7 +193,7 @@ def run():  # pylint: disable=too-many-statements,too-many-locals
     run_path.mkdir(parents=True, exist_ok=True)
 
     export_destination = f"predictions-{model_id}.csv"
-    predict_dataset.data[["siren", "siret", "predicted_probability"]].to_csv(
+    predict.data[["siren", "siret", "predicted_probability"]].to_csv(
         run_path / export_destination, index=False
     )
 
@@ -157,19 +201,83 @@ def run():  # pylint: disable=too-many-statements,too-many-locals
         stats_file.write(json.dumps(model_stats))
 
 
-parser = argparse.ArgumentParser("main.py", description="Run model prediction")
+def make_parser():
+    """
+    Builds a parser object with all arguments to run a custom version of prediction
+    """
+    parser = argparse.ArgumentParser("main.py", description="Run model prediction")
 
-parser.add_argument(
-    "--model_name",
-    type=str,
-    default="default",
-    help="The model to use for prediction. If not provided, models/default will be used",
-)
+    parser.add_argument(
+        "--model_name",
+        type=str,
+        default="default",
+        help="The model to use for prediction. If not provided, models 'default' will be used",
+    )
 
-conf_args = parser.parse_args()
+    train_args = parser.add_argument_group("Train dataset")
+    train_args.add_argument(
+        "--train_sample",
+        type=int,
+        dest="train_spl_size",
+        help="Train the model on data from this date",
+    )
+    train_args.add_argument(
+        "--oversampling",
+        type=float,
+        dest="train_proportion_positive_class",
+        help="""
+        Enforces the ratio of positive observations
+        (entreprises en defaillance) to be the specified ratio
+        """,
+    )
+    train_args.add_argument(
+        "--train_from",
+        type=str,
+        help="Train the model on data from this date",
+    )
+    train_args.add_argument(
+        "--train_to",
+        type=str,
+        help="Train the model on data up to this date",
+    )
 
-conf = load_conf(conf_args)
+    test_args = parser.add_argument_group("Test dataset")
+    test_args.add_argument(
+        "--test_sample",
+        type=int,
+        dest="test_spl_size",
+        help="The sample size to test the model on",
+    )
+    test_args.add_argument(
+        "--test_from",
+        type=str,
+        help="Test the model on data from this date",
+    )
+    test_args.add_argument(
+        "--test_to",
+        type=str,
+        help="Test the model on data up to this date",
+    )
+
+    predict_args = parser.add_argument_group("Predict dataset")
+    predict_args.add_argument(
+        "--predict_sample",
+        type=int,
+        dest="predict_spl_size",
+        help="The sample size to predict on",
+    )
+    predict_args.add_argument(
+        "--predict_on",
+        type=str,
+        help="""
+        Predict on all companies for the month specified.
+        To predict on April 2021, provide any date such as '2021-04-01'
+        """,
+    )
+
+    return parser
 
 
 if __name__ == "__main__":
-    run()
+    model_args = make_parser().parse_args()
+    run(model_args)

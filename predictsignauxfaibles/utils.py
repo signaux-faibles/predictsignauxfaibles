@@ -161,3 +161,15 @@ def check_feature(feature_name: str, variables: list, pipeline: List[NamedTuple]
         if step.output is not None and feature_name in step.output:
             is_ok = True
     return is_ok
+
+
+def set_if_not_none(obj, attr, val):
+    """
+    Sets the attribute of an object with some value if that value is not null
+    Args:
+        obj: any object
+        attr: the attribute to be set
+        val: the value to set. If None, attr will remain unchanged
+    """
+    if val is not None:
+        setattr(obj, attr, val)

@@ -1,6 +1,6 @@
 # pylint: disable=missing-function-docstring
 
-from predictsignauxfaibles.utils import MongoDBQuery
+from predictsignauxfaibles.utils import MongoDBQuery, set_if_not_none
 
 
 def test_empty_pipeline():
@@ -85,3 +85,28 @@ def test_reset_pipeline():
         query.add_limit(limit=i)
         assert len(query.to_pipeline()) == 1
         query.reset()
+
+
+def test_set_if_not_none():
+    class TestObject:  # pylint: disable=too-few-public-methods
+        """
+        Test class
+        ...
+        Attributes
+        ----------
+        my_attr_1: str
+            should be modified  by test
+        my_attr_2: str
+            should not be modified by test
+        """
+
+        def __init__(self):
+            self.my_attr_1 = "foo"
+            self.my_attr_2 = 1
+
+    my_obj = TestObject()
+    set_if_not_none(my_obj, "my_attr_1", "bar")
+    set_if_not_none(my_obj, "my_attr_2", None)
+
+    assert my_obj.my_attr_1 == "bar"
+    assert my_obj.my_attr_2 == 1
