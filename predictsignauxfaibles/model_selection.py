@@ -2,68 +2,7 @@ import random
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import average_precision_score
-
-from predictsignauxfaibles.data import SFDataset
 from predictsignauxfaibles.decorators import is_random
-from predictsignauxfaibles.models import SFModel
-
-
-class SFModelEvaluator:
-    """
-    Evaluate the performances of a Signaux Faible model
-    Input:
-        model: a SFModel instance (trained or not)
-    """
-
-    def __init__(self, model: SFModel):
-        self.model = model
-        self.train_set = model.dataset
-        self.validate_set = None
-
-    def cv_evaluation(self, num_folds: int, validate_set: SFDataset):
-        """
-        Evaluate a model using custom cross-validation (see the repo's doc for more information)
-        Args:
-            num_folds = number of folds to use in Cross-validation
-            validate_set = a SFDataset containing the validation data
-
-        NB: evaluation will be biased if the validation set is not at least 18 months
-         away from the training set.
-
-        Returns:
-            A dictionary in the following format:
-                {"{fold_0}": score, ..., "{fold_num_folds}": score,}
-        """
-        cv_splits = make_sf_train_test_splits(
-            self.train_set.data, validate_set.data, num_folds
-        )
-
-        scores = {}
-        for i, split in cv_splits.items():
-            train = self.train_set.data.iloc[split["train_on"]]
-            validate = validate_set.data.iloc[split["validate_on"]]
-            self.model.X = train[self.model.features]
-            self.model.y = train[[self.model.target]]
-            predicted_probas = self.model.train().predict_proba(
-                validate[self.model.features]
-            )
-            scores[i] = self.evaluate(validate[[self.model.target]], predicted_probas)
-
-        return scores
-
-    @staticmethod
-    def evaluate(y_true, y_score):
-        """
-        Evaluation metrics used to evaluate our Signaux Faible models.
-        """
-        return average_precision_score(y_true, y_score)
-
-    def __repr__(self):
-        return f"SFModelEvaluator (model : {type(self.model)})"
-
-    def __str__(self):
-        return self.__repr__()
 
 
 @is_random
