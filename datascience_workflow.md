@@ -9,7 +9,7 @@ Nous utilisons une version simplifiée du Git Flow:
 ### `main`
 - `main` est la branche qui contient la seule et unique version du modèle signaux-faibles de production. En théorie, le modèle/code présent sur cette branche devrait pouvoir être utilisé pas n'importe qui (développeur, DevOps, data scientist) sans avoir à se concerter avec le data scientist responsable du modèle. Cette branche a donc vocation à être :
   - **stable** : seuls les modèles qui apportent une amélioration claire, documentée et testée sont mergés dans `main`. Cette branche contient du code fonctionnel et qui ne cassera pas la production.
-  - **versionée** : les différentes releases sont taggées en suivant le format `MODELE.AMELIORATION.BUGFIX`.
+  - **versionée** : les différentes releases sont taggées en suivant le format `YY.MM` correspondant au mois de prédiction du modèle.
   - **documentée** : un modèle utilisé en production doit nécéssairement avoir une documentation à jour. Il est également bon d'utiliser un [`changelog`](https://keepachangelog.com/en/1.0.0/) afin d'expliciter les changements apportés aux différentes versions du modèle.
   - **protégée** : il est impossible de pousser des changements directement dans `main`. Le seul moyen de la faire évoluer est de merger une pull request ayant été revue et validée par un.e pair.e — *idéalement* depuis `develop` (voir ci-dessous).
 
@@ -29,7 +29,7 @@ Nous utilisons une version simplifiée du Git Flow:
 - `hotfix/<nom_du_fix>` est une branche dite de "hotfix". Elle peut être mergée directement en production (`main`) dans le cas ou cette dernière est cassée.
   - ne doit être ouverte que le temps de la résolution d'un bug en production
   - ne doit contenir que le code minimum nécessaire à la résolution du bug + le cas échéant, un test permettant de s'assurer que le bug ne réapparaitra pas
-  - ne doit (évidemment) pas introduire de nouveaux bugs ou de régression, et doit donc à minima passer la CI/CD
+  - ne doit (évidemment) pas introduire de nouveaux bugs ou de régression, et doit donc à minima passer la CI
 
 ### Resumé
 Ce schéma résume notre git flow (NB: [l'utilisation du terme `main` est aujourd'hui préféré à celui, plus connoté, de `master`](https://www.techrepublic.com/article/github-to-replace-main-with-main-starting-in-october-what-developers-need-to-know/)):
@@ -53,6 +53,12 @@ Pour un nouveau modèle
 Pour une correction de bug en production
 `hotfix/<description>`
 
+Pour une refactorisation du code
+`refacto/<description>`
+
+Pour des correctifs non urgents
+`fix/<description>`
+
 ### Commits
 
 Dans l'esprit, se référer à : [conventionalcommits](https://www.conventionalcommits.org/en/v1.0.0-beta.2/)
@@ -66,7 +72,7 @@ git commit -m '{TYPE}: MESSAGE'
 - `{TYPE}`: decrit le type de commit;
   - _`fix`_ _bug fix_
   - _`feat`_ _rajout d'une feature_
-  - _`refactor`_ _une amélioration (refacto, factorisation, simplification, etc.)_
+  - _`refacto`_ _une amélioration (refacto, factorisation, simplification, etc.)_
   - _`clean`_ _nettoyage du code_
   - _`doc`_ _ajout de documentation_
   - _`config`_ _changement de la configuration du projet_
@@ -123,4 +129,6 @@ versionné dans git avec chaque nouvelle version du modèle.
 
 ## Securité et Configuration :construction_worker:
 
-- Note importante : **Le code poussé dans `predictsignauxfaibles` ne doit jamais contenir l'URI MongoDb**
+- **Les notebooks Jupyter doivent être commités non-executés. Toujours s'assurer que de la donnée sensible n'est pas contenue dans ce dépot.**
+- **Le code poussé dans `predictsignauxfaibles` ne doit jamais contenir l'URI MongoDb**
+
