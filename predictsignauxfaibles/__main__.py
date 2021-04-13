@@ -201,77 +201,83 @@ def run(
         stats_file.write(json.dumps(model_stats))
 
 
-parser = argparse.ArgumentParser("main.py", description="Run model prediction")
+def make_parser():
+    """
+    Builds a parser object with all arguments to run a custom version of prediction
+    """
+    parser = argparse.ArgumentParser("main.py", description="Run model prediction")
 
-parser.add_argument(
-    "--model_name",
-    type=str,
-    default="default",
-    help="The model to use for prediction. If not provided, models 'default' will be used",
-)
+    parser.add_argument(
+        "--model_name",
+        type=str,
+        default="default",
+        help="The model to use for prediction. If not provided, models 'default' will be used",
+    )
 
-train_args = parser.add_argument_group("Train dataset")
-train_args.add_argument(
-    "--train_sample",
-    type=int,
-    dest="train_spl_size",
-    help="Train the model on data from this date",
-)
-train_args.add_argument(
-    "--oversampling",
-    type=float,
-    dest="train_proportion_positive_class",
-    help="""
-    Enforces the ratio of positive observations
-    (entreprises en defaillance) to be the specified ratio
-    """,
-)
-train_args.add_argument(
-    "--train_from",
-    type=str,
-    help="Train the model on data from this date",
-)
-train_args.add_argument(
-    "--train_to",
-    type=str,
-    help="Train the model on data up to this date",
-)
+    train_args = parser.add_argument_group("Train dataset")
+    train_args.add_argument(
+        "--train_sample",
+        type=int,
+        dest="train_spl_size",
+        help="Train the model on data from this date",
+    )
+    train_args.add_argument(
+        "--oversampling",
+        type=float,
+        dest="train_proportion_positive_class",
+        help="""
+        Enforces the ratio of positive observations
+        (entreprises en defaillance) to be the specified ratio
+        """,
+    )
+    train_args.add_argument(
+        "--train_from",
+        type=str,
+        help="Train the model on data from this date",
+    )
+    train_args.add_argument(
+        "--train_to",
+        type=str,
+        help="Train the model on data up to this date",
+    )
 
-test_args = parser.add_argument_group("Test dataset")
-test_args.add_argument(
-    "--test_sample",
-    type=int,
-    dest="test_spl_size",
-    help="The sample size to test the model on",
-)
-test_args.add_argument(
-    "--test_from",
-    type=str,
-    help="Test the model on data from this date",
-)
-test_args.add_argument(
-    "--test_to",
-    type=str,
-    help="Test the model on data up to this date",
-)
+    test_args = parser.add_argument_group("Test dataset")
+    test_args.add_argument(
+        "--test_sample",
+        type=int,
+        dest="test_spl_size",
+        help="The sample size to test the model on",
+    )
+    test_args.add_argument(
+        "--test_from",
+        type=str,
+        help="Test the model on data from this date",
+    )
+    test_args.add_argument(
+        "--test_to",
+        type=str,
+        help="Test the model on data up to this date",
+    )
 
-predict_args = parser.add_argument_group("Predict dataset")
-predict_args.add_argument(
-    "--predict_sample",
-    type=int,
-    dest="predict_spl_size",
-    help="The sample size to predict on",
-)
-predict_args.add_argument(
-    "--predict_on",
-    type=str,
-    help="""
-    Predict on all companies for the month specified.
-    To predict on April 2021, provide any date such as '2021-04-01'
-    """,
-)
+    predict_args = parser.add_argument_group("Predict dataset")
+    predict_args.add_argument(
+        "--predict_sample",
+        type=int,
+        dest="predict_spl_size",
+        help="The sample size to predict on",
+    )
+    predict_args.add_argument(
+        "--predict_on",
+        type=str,
+        help="""
+        Predict on all companies for the month specified.
+        To predict on April 2021, provide any date such as '2021-04-01'
+        """,
+    )
 
-model_args = parser.parse_args()
+    return parser
+
 
 if __name__ == "__main__":
+    model_args = make_parser().parse_args()
     run(model_args)
