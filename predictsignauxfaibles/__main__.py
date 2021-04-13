@@ -11,6 +11,7 @@ from sklearn.metrics import fbeta_score, balanced_accuracy_score
 from predictsignauxfaibles.config import OUTPUT_FOLDER, IGNORE_NA
 from predictsignauxfaibles.pipelines import run_pipeline
 from predictsignauxfaibles.utils import set_if_not_none
+from predictsignauxfaibles.data import SFDataset
 
 sys.path.append("../")
 
@@ -52,7 +53,7 @@ def load_conf(args: argparse.Namespace):  # pylint: disable=redefined-outer-name
     return model_conf
 
 
-def load_datasets_from_conf(args_ns: argparse.Namespace, conf: ModuleType):
+def get_train_test_predict_datasets(args_ns: argparse.Namespace, conf: ModuleType):
     """
     Configures train, test and predict dataset from user-provided options when pertaining.
     Args:
@@ -60,6 +61,10 @@ def load_datasets_from_conf(args_ns: argparse.Namespace, conf: ModuleType):
       the custom attributes to be used for training, testing and/or prediction
       conf: the model configuration module containing default parameters,
       to be overwritten by the content of args_ns
+    Returns:
+      train: a SFDataset object containing the training data
+      test: a SFDataset object containing the test data
+      predict: a SFDataset object containing the data to predict on
     """
     datasets = {
         "train": conf.TRAIN_DATASET,
@@ -67,17 +72,33 @@ def load_datasets_from_conf(args_ns: argparse.Namespace, conf: ModuleType):
         "predict": conf.PREDICT_DATASET,
     }
 
-    stats = {}
-
     args_dict = vars(args_ns)
     for (arg, dest) in ARGS_TO_ATTRS.items():
         set_if_not_none(datasets[dest[0]], dest[1], args_dict[arg])
-        stats[arg] = getattr(datasets[dest[0]], dest[1])
 
     if args_ns.predict_on is not None:
         datasets["predict"].date_max = args_ns.predict_on[:-2] + "28"
 
-    return (datasets["train"], datasets["test"], datasets["predict"]), stats
+    return datasets["train"], datasets["test"], datasets["predict"]
+
+
+def make_stats(train: SFDataset, test: SFDataset, predict: SFDataset):
+    """
+    Initialises a dictionary containing model run stats for logging purposes
+    Args:
+      train: a SFDataset object containing the training data
+      test: a SFDataset object containing the test data
+      predict: a SFDataset object containing the data to predict on
+    Returns:
+      stats: a dictionnary containing model run parameters
+    """
+    stats = {}
+    datasets = {"train": train, "test": test, "predict": predict}
+
+    for (arg, dest) in ARGS_TO_ATTRS.items():
+        stats[arg] = getattr(datasets[dest[0]], dest[1])
+
+    return stats
 
 
 def evaluate(
@@ -108,23 +129,23 @@ def run(
     )
     model_id = datetime.now().strftime("%Y%m%d-%H%M%S")
 
-    datasets, model_stats = load_datasets_from_conf(args, conf)
-    (train_dataset, test_dataset, predict_dataset) = datasets
+    train, test, predict = get_train_test_predict_datasets(args, conf)
+    model_stats = make_stats(train, test, predict)
     model_stats["run_on"] = model_id
 
     step = "[TRAIN]"
     model_stats["train"] = {}
-    logging.info(f"{step} - Fetching train set ({train_dataset.sample_size} samples)")
-    train_dataset.fetch_data()
+    logging.info(f"{step} - Fetching train set ({train.sample_size} samples)")
+    train.fetch_data()
 
     logging.info(f"{step} - Data preprocessing")
-    train_dataset.replace_missing_data().remove_na(ignore=IGNORE_NA)
-    train_dataset.data = run_pipeline(train_dataset.data, conf.TRANSFO_PIPELINE)
+    train.replace_missing_data().remove_na(ignore=IGNORE_NA)
+    train.data = run_pipeline(train.data, conf.TRANSFO_PIPELINE)
 
-    logging.info(f"{step} - Training on {len(train_dataset)} observations.")
-    fit = conf.MODEL_PIPELINE.fit(train_dataset.data, train_dataset.data["outcome"])
+    logging.info(f"{step} - Training on {len(train)} observations.")
+    fit = conf.MODEL_PIPELINE.fit(train.data, train.data["outcome"])
 
-    eval_metrics = evaluate(fit, train_dataset, conf.EVAL_BETA)
+    eval_metrics = evaluate(fit, train, conf.EVAL_BETA)
     balanced_accuracy_train = eval_metrics.get("balanced_accuracy")
     fbeta_train = eval_metrics.get("fbeta")
     logging.info(f"{step} - Balanced_accuracy: {balanced_accuracy_train}")
@@ -134,20 +155,18 @@ def run(
 
     step = "[TEST]"
     model_stats["test"] = {}
-    logging.info(f"{step} - Fetching test set ({test_dataset.sample_size} samples)")
-    test_dataset.fetch_data()
+    logging.info(f"{step} - Fetching test set ({test.sample_size} samples)")
+    test.fetch_data()
 
-    train_siren_set = train_dataset.data["siren"].unique().tolist()
-    test_dataset.remove_siren(train_siren_set)
+    train_siren_set = train.data["siren"].unique().tolist()
+    test.remove_siren(train_siren_set)
 
     logging.info(f"{step} - Data preprocessing")
-    test_dataset.replace_missing_data().remove_na(
-        ignore=IGNORE_NA
-    ).remove_strong_signals()
-    test_dataset.data = run_pipeline(test_dataset.data, conf.TRANSFO_PIPELINE)
-    logging.info(f"{step} - Testing on {len(test_dataset)} observations.")
+    test.replace_missing_data().remove_na(ignore=IGNORE_NA).remove_strong_signals()
+    test.data = run_pipeline(test.data, conf.TRANSFO_PIPELINE)
+    logging.info(f"{step} - Testing on {len(test)} observations.")
 
-    eval_metrics = evaluate(fit, test_dataset, conf.EVAL_BETA)
+    eval_metrics = evaluate(fit, test, conf.EVAL_BETA)
     balanced_accuracy_test = eval_metrics.get("balanced_accuracy")
     fbeta_test = eval_metrics.get("fbeta")
     logging.info(f"{step} - Balanced_accuracy: {balanced_accuracy_test}")
@@ -159,14 +178,14 @@ def run(
     model_stats["predict"] = {}
 
     logging.info(f"{step} - Fetching predict set")
-    predict_dataset.fetch_data()
+    predict.fetch_data()
     logging.info(f"{step} - Data preprocessing")
-    predict_dataset.replace_missing_data()
-    predict_dataset.remove_na(ignore=IGNORE_NA)
-    predict_dataset.data = run_pipeline(predict_dataset.data, conf.TRANSFO_PIPELINE)
-    logging.info(f"{step} - Predicting on {len(predict_dataset)} observations.")
-    predictions = fit.predict_proba(predict_dataset.data)
-    predict_dataset.data["predicted_probability"] = predictions[:, 1]
+    predict.replace_missing_data()
+    predict.remove_na(ignore=IGNORE_NA)
+    predict.data = run_pipeline(predict.data, conf.TRANSFO_PIPELINE)
+    logging.info(f"{step} - Predicting on {len(predict)} observations.")
+    predictions = fit.predict_proba(predict.data)
+    predict.data["predicted_probability"] = predictions[:, 1]
 
     logging.info(f"{step} - Exporting prediction data to csv")
 
@@ -174,7 +193,7 @@ def run(
     run_path.mkdir(parents=True, exist_ok=True)
 
     export_destination = f"predictions-{model_id}.csv"
-    predict_dataset.data[["siren", "siret", "predicted_probability"]].to_csv(
+    predict.data[["siren", "siret", "predicted_probability"]].to_csv(
         run_path / export_destination, index=False
     )
 
