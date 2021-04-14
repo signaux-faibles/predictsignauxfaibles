@@ -136,7 +136,7 @@ def run(
     step = "[TRAIN]"
     model_stats["train"] = {}
     logging.info(f"{step} - Fetching train set ({train.sample_size} samples)")
-    train.fetch_data()
+    train.fetch_data().raise_if_empty()
 
     logging.info(f"{step} - Data preprocessing")
     train.replace_missing_data().remove_na(ignore=IGNORE_NA)
@@ -156,7 +156,7 @@ def run(
     step = "[TEST]"
     model_stats["test"] = {}
     logging.info(f"{step} - Fetching test set ({test.sample_size} samples)")
-    test.fetch_data()
+    test.fetch_data().raise_if_empty()
 
     train_siren_set = train.data["siren"].unique().tolist()
     test.remove_siren(train_siren_set)
@@ -178,7 +178,7 @@ def run(
     model_stats["predict"] = {}
 
     logging.info(f"{step} - Fetching predict set")
-    predict.fetch_data()
+    predict.fetch_data().raise_if_empty()
     logging.info(f"{step} - Data preprocessing")
     predict.replace_missing_data()
     predict.remove_na(ignore=IGNORE_NA)

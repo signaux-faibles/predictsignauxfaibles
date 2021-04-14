@@ -141,6 +141,14 @@ class SFDataset:
 
         return self
 
+    def raise_if_empty(self):
+        """
+        Check that dataset is filled with data
+        """
+        if len(self) == 0:
+            raise EmptyDataset("Dataset is empty !")
+        return self
+
     def explain(self):
         """
         Explain MongoDB query plan for Dataset
@@ -294,3 +302,9 @@ class OversampledSFDataset(SFDataset):
         full_data = true_data.append(false_data)
         self.data = full_data.sample(frac=1).reset_index(drop=True)
         return self
+
+
+class EmptyDataset(Exception):
+    """
+    Custom error for empty datasets
+    """
