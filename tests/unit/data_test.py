@@ -5,7 +5,7 @@ import random
 import pandas as pd
 import pytest
 
-from predictsignauxfaibles.data import SFDataset
+from predictsignauxfaibles.data import SFDataset, EmptyDataset
 
 
 @pytest.fixture
@@ -73,3 +73,15 @@ def test_remove_siren(fake_testing_dataset):
     siren_list = fake_testing_dataset.data["siren"].sample(n=6).tolist()
     fake_testing_dataset.remove_siren(siren_list=siren_list)
     assert len(fake_testing_dataset) == 14
+
+
+def test_raise_if_empty_None(fake_testing_dataset):
+    fake_testing_dataset.data = None
+    with pytest.raises(EmptyDataset):
+        fake_testing_dataset.raise_if_empty()
+
+
+def test_raise_if_empty_DF(fake_testing_dataset):
+    fake_testing_dataset.data = pd.DataFrame()
+    with pytest.raises(EmptyDataset):
+        fake_testing_dataset.raise_if_empty()
