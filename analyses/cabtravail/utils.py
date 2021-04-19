@@ -1,4 +1,4 @@
-#pylint: disable="raise-missing-from"
+# pylint: disable="raise-missing-from"
 import logging
 from datetime import datetime
 import pytz
@@ -10,7 +10,6 @@ import pandas as pd
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-
 
 
 def str_to_datetime(date_str: str):

@@ -71,3 +71,26 @@ NAN_RPL = {
     "endettement": 0.0,
     "taux_endettement": 0.0,
 }
+
+CODES_REGION = {
+    "Guadeloupe": 1,
+    "Martinique": 2,
+    "Guyane": 3,
+    "La Réunion": 4,
+    "Mayotte": 6,
+    "Île-de-France": 11,
+    "Centre-Val de Loire": 24,
+    "Bourgogne-Franche-Comté": 27,
+    "Normandie": 28,
+    "Hauts-de-France": 32,
+    "Grand Est": 44,
+    "Pays de la Loire": 52,
+    "Bretagne": 53,
+    "Nouvelle-Aquitaine": 75,
+    "Occitanie": 76,
+    "Auvergne-Rhône-Alpes": 84,
+    "Provence-Alpes-Côte d'Azur": 93,
+    "Corse": 94,
+}
+
+NAF_INDUSTRY = ["B", "C", "D", "E", "G", "H"]
