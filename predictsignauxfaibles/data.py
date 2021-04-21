@@ -1,6 +1,7 @@
 import logging
 
 import pandas as pd
+from numpy.random import rand, randint
 from pymongo import MongoClient, monitoring
 from pymongo.cursor import Cursor
 
@@ -308,3 +309,81 @@ class EmptyDataset(Exception):
     """
     Custom error for empty datasets
     """
+
+
+def build_synthetic_dataset(
+    base: SFDataset,
+    cont_variables: list,
+    cat_variables: list,
+    sirets_per_synthetic: int = 5,
+):
+    """
+    Génère un set de données synthétique, contenant des établissements fictifs.
+    Les établissements synthétiquessont générés à partir d'établissements de nature similaire,
+    en aggrégant les données de X établissements à minima
+    pour générer un seul établissement synthétique.
+    Chaque synthétique est fabriqué à partir de <sirets_per_synthetic>
+    établissements d'un même sous-secteur (APE 3).
+    Args:
+        base: SFDataset
+            The dataset to build a synthetic extract from
+        cont_variables: list
+            The list of continuous variables from collection Features to include in the extract
+        cat_variables: list
+            The list of categorical variables from collection Features to include in the extract
+        sirets_per_synthetic: int
+            The number of établissements required to build a synthetic SIRET from
+    """
+    # Finding subsectors with enough SIRET to build a synthetic
+    subsectors_count = base.data.groupby("code_ape_niveau3").agg(
+        siret_count=("siret", "count")
+    )
+    repr_subsectors = subsectors_count[
+        subsectors_count["siret_count"] > sirets_per_synthetic
+    ].index.tolist()
+    models = base.data[base.data["code_ape_niveau3"].isin(repr_subsectors)]
+
+    # Building a random ranking by ape3 that we will use to generate synthetics
+    models["ranker"] = rand(models.shape[0])
+    models["within_ape3_id"] = models.groupby("code_ape_niveau3")["ranker"].rank()
+    models["within_ape3_group_id"] = models["within_ape3_id"] % sirets_per_synthetic
+
+    # Filtering synthesis set
+    cont_agg_dct = {cont_var: "mean" for cont_var in cont_variables}
+    dflt_agg_dct = {"periode": "max"}
+
+    agg_dct = dict(cont_agg_dct, **dflt_agg_dct)
+
+    within_ape3_ref = models.groupby(
+        ["code_ape_niveau3", "within_ape3_group_id"]
+    ).within_ape3_id.idxmin()
+    synthetic_cont = models.groupby(["code_ape_niveau3", "within_ape3_group_id"]).agg(
+        agg_dct
+    )
+
+    cat_references = models.loc[within_ape3_ref]
+    cat_references.index = pd.MultiIndex.from_frame(
+        cat_references[["code_ape_niveau3", "within_ape3_group_id"]]
+    )
+    cat_references.drop(
+        ["code_ape_niveau3", "within_ape3_group_id"], axis=1, inplace=True
+    )
+
+    synthetic = pd.merge(
+        synthetic_cont,
+        cat_references[cat_variables],
+        on=["code_ape_niveau3", "within_ape3_group_id"],
+        how="inner",
+    )
+
+    synthetic["synth_siret"] = randint(1e13, 1e14 - 1, len(synthetic)).astype(str)
+    synthetic["synth_siren"] = synthetic["synth_siret"].apply(lambda siret: siret[:9])
+
+    synthetic.set_index("synth_siret", inplace=True, drop=False)
+    synthetic = synthetic[
+        ["synth_siret", "synth_siren", "periode", "outcome"]
+        + cat_variables
+        + cont_variables
+    ]
+
+    return synthetic
