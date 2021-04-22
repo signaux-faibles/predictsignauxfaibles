@@ -10,22 +10,23 @@ from predictsignauxfaibles.pipelines import (
 )
 
 from predictsignauxfaibles.preprocessors import Preprocessor
+from predictsignauxfaibles.redressements import Redressement
 
 from tests.fake_data.dataframes import df_test_full
 
 
 @pytest.mark.parametrize("pipeline", ALL_PIPELINES)
-def test_final_pipeline(pipeline):
-    for preprocessor in pipeline:
-        assert isinstance(preprocessor, Preprocessor)
-        assert hasattr(preprocessor, "name")
-        assert hasattr(preprocessor, "function")
-        assert hasattr(preprocessor, "input")
-        assert hasattr(preprocessor, "output")
-        assert isinstance(preprocessor.name, str)
-        assert callable(preprocessor.function)
-        assert isinstance(preprocessor.input, list)
-        assert isinstance(preprocessor.output, list) or preprocessor.output is None
+def test_all_pipeline(pipeline):
+    for step in pipeline:
+        assert isinstance(step, (Preprocessor, Redressement))
+        assert hasattr(step, "name")
+        assert hasattr(step, "function")
+        assert hasattr(step, "input")
+        assert hasattr(step, "output")
+        assert isinstance(step.name, str)
+        assert callable(step.function)
+        assert isinstance(step.input, list)
+        assert isinstance(step.output, list) or step.output is None
 
 
 def test_default_pipeline_sucess():
