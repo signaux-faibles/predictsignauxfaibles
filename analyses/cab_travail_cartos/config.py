@@ -93,4 +93,4 @@ CODES_REGION = {
     "Corse": 94,
 }
 
-NAF_INDUSTRY = ["B", "C", "D", "E", "G", "H"]
+NAF_INDUSTRY = ["B", "C", "D", "E"]

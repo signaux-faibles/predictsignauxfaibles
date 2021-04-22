@@ -6,7 +6,7 @@ import config as cab_config
 from pymongo import MongoClient
 
 import pandas as pd
-
+from config import CODES_REGION
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -192,3 +192,13 @@ def load_scores(
     scores = load_scores_from_mongo(batch_name, algo_name, filepath)
     # scores.periode = scores.periode.apply(str_to_datetime)
     return scores
+
+
+def map_region_to_code(reg_name):
+    """
+    Maps a region name to its INSEE code
+    """
+    reg_code = None
+    if reg_name != "" and reg_name is not None:
+        reg_code = CODES_REGION[reg_name]
+    return reg_code
