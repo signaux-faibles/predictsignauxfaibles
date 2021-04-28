@@ -312,41 +312,43 @@ class EmptyDataset(Exception):
 
 
 def build_synthetic_dataset(
-    base: SFDataset,
+    base_dataset: SFDataset,
     cont_variables: list,
     cat_variables: list,
-    sirets_per_synthetic: int = 5,
+    group_size: int = 5,
 ):
     """
     Génère un set de données synthétique, contenant des établissements fictifs.
     Les établissements synthétiquessont générés à partir d'établissements de nature similaire,
     en aggrégant les données de X établissements à minima
     pour générer un seul établissement synthétique.
-    Chaque synthétique est fabriqué à partir de <sirets_per_synthetic>
+    Chaque synthétique est fabriqué à partir de <group_size>
     établissements d'un même sous-secteur (APE 3).
     Args:
-        base: SFDataset
+        base_dataset: SFDataset
             The dataset to build a synthetic extract from
         cont_variables: list
             The list of continuous variables from collection Features to include in the extract
         cat_variables: list
             The list of categorical variables from collection Features to include in the extract
-        sirets_per_synthetic: int
+        group_size: int
             The number of établissements required to build a synthetic SIRET from
     """
     # Finding subsectors with enough SIRET to build a synthetic
-    subsectors_count = base.data.groupby("code_ape_niveau3").agg(
+    subsectors_count = base_dataset.data.groupby("code_ape_niveau3").agg(
         siret_count=("siret", "count")
     )
     repr_subsectors = subsectors_count[
-        subsectors_count["siret_count"] > sirets_per_synthetic
+        subsectors_count["siret_count"] > group_size
     ].index.tolist()
-    models = base.data[base.data["code_ape_niveau3"].isin(repr_subsectors)]
+    models = base_dataset.data[
+        base_dataset.data["code_ape_niveau3"].isin(repr_subsectors)
+    ]
 
     # Building a random ranking by ape3 that we will use to generate synthetics
     models["ranker"] = rand(models.shape[0])
     models["within_ape3_id"] = models.groupby("code_ape_niveau3")["ranker"].rank()
-    models["within_ape3_group_id"] = models["within_ape3_id"] % sirets_per_synthetic
+    models["within_ape3_group_id"] = models["within_ape3_id"] % group_size
 
     # Filtering synthesis set
     cont_agg_dct = {cont_var: "mean" for cont_var in cont_variables}
@@ -376,14 +378,12 @@ def build_synthetic_dataset(
         how="inner",
     )
 
-    synthetic["synth_siret"] = randint(1e13, 1e14 - 1, len(synthetic)).astype(str)
-    synthetic["synth_siren"] = synthetic["synth_siret"].apply(lambda siret: siret[:9])
+    synthetic["siret"] = randint(1e13, 1e14 - 1, len(synthetic)).astype(str)
+    synthetic["siren"] = synthetic["siret"].apply(lambda siret: siret[:9])
 
-    synthetic.set_index("synth_siret", inplace=True, drop=False)
+    synthetic.set_index("siret", inplace=True, drop=False)
     synthetic = synthetic[
-        ["synth_siret", "synth_siren", "periode", "outcome"]
-        + cat_variables
-        + cont_variables
+        ["siret", "siren", "periode", "outcome"] + cat_variables + cont_variables
     ]
 
     return synthetic
