@@ -1,16 +1,15 @@
 import argparse
 from datetime import datetime
-import importlib.util
 import json
+import logging
 from pathlib import Path
 import sys
-import logging
 from types import ModuleType
 
 from sklearn.metrics import fbeta_score, balanced_accuracy_score
 from predictsignauxfaibles.config import OUTPUT_FOLDER, IGNORE_NA
 from predictsignauxfaibles.pipelines import run_pipeline
-from predictsignauxfaibles.utils import set_if_not_none
+from predictsignauxfaibles.utils import set_if_not_none, load_conf
 from predictsignauxfaibles.data import SFDataset
 
 sys.path.append("../")
@@ -31,26 +30,6 @@ ARGS_TO_ATTRS = {
     "test_to": ("test", "date_max"),
     "predict_on": ("predict", "date_min"),
 }
-
-
-def load_conf(args: argparse.Namespace):  # pylint: disable=redefined-outer-name
-    """
-    Loads a model configuration from a argparse.Namespace
-    containing a model name
-    Args:
-        conf_args: a argparse.Namespace object containing attributes
-            model_name
-    """
-    conf_filepath = Path("models") / args.model_name / "model_conf.py"
-    if not conf_filepath.exists():
-        raise ValueError(f"{conf_filepath} does not exist")
-
-    spec = importlib.util.spec_from_file_location(
-        f"models.{args.model_name}.model_conf", conf_filepath
-    )
-    model_conf = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(model_conf)  # pylint: disable=wrong-import-position
-    return model_conf
 
 
 def get_train_test_predict_datasets(args_ns: argparse.Namespace, conf: ModuleType):
@@ -123,7 +102,7 @@ def run(
     """
     Run model
     """
-    conf = load_conf(args)
+    conf = load_conf(args.model_name)
     logging.info(
         f"Running Model {conf.MODEL_ID} (commit {conf.MODEL_GIT_SHA}) ENV={conf.ENV}"
     )
