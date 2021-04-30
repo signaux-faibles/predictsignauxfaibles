@@ -7,7 +7,11 @@ import sys
 import logging
 from types import ModuleType
 
+import numpy as np
+import pandas as pd
 from sklearn.metrics import fbeta_score, balanced_accuracy_score
+from sklearn.pipeline import Pipeline
+
 from predictsignauxfaibles.config import OUTPUT_FOLDER, IGNORE_NA
 from predictsignauxfaibles.pipelines import run_pipeline
 from predictsignauxfaibles.utils import set_if_not_none
@@ -102,7 +106,7 @@ def make_stats(train: SFDataset, test: SFDataset, predict: SFDataset):
 
 
 def evaluate(
-    model, dataset, beta
+    model: Pipeline, dataset: SFDataset, beta: float
 ):  # To be turned into a SFModel method when refactoring models
     """
     Returns evaluation metrics of model evaluated on df
@@ -115,6 +119,64 @@ def evaluate(
     )
     fbeta = fbeta_score(dataset.data["outcome"], model.predict(dataset.data), beta=beta)
     return {"balanced_accuracy": balanced_accuracy, "fbeta": fbeta}
+
+
+def make_clues_failure(feat_weights: pd.Series):
+    """
+    Returns a dict containing the features that most positively impacted the classification score,
+    meaning that they most contribute to the établissement being considered at-risk
+    """
+    feat_weights = feat_weights.sort_values(ascending=False)
+    return feat_weights[feat_weights > 0].to_dict()
+
+
+def make_clues_nofailure(feat_weights: pd.Series):
+    """
+    Returns a dict containing the features that most negatively impacted the classification score,
+    meaning that they most contribute to the établissement being considered safe, in good standing
+    """
+    feat_weights = feat_weights.sort_values(ascending=False)
+    return feat_weights[feat_weights < 0].to_dict()
+
+
+def explain(sf_data: SFDataset, model_pp: Pipeline, conf: ModuleType):
+    """
+    Provides the relative contribution to the score intensity
+    (ie, the term within the sigmoid, which is any real number
+    that will later be brought to [0,1] by the sigmoid)
+    Arguments:
+        lr: LogisticRegression
+            The LogReg that has been used to train the model
+        etab: pd.Series
+            A Series containing all features of the etablissement that were input to the LogReg
+        feat_groups: dict
+            A dictionnary mapping macro features to lists of features.
+            Each key is a macro variable name, associated to a group of model features.
+            The contribution of all features in the value list are considered together.
+    """
+    (_, mapper) = model_pp.steps[0]
+    mapped_data = mapper.transform(sf_data.data)
+    mapped_data = np.hstack((mapped_data, np.ones((len(sf_data), 1))))
+
+    mapper.transformed_names_[-len(conf.TO_SCALE) : -1] = conf.TO_SCALE
+    mapper.transformed_names_[-1] = "model_offset"
+    (_, logreg) = model_pp.steps[1]
+    coefs = np.append(logreg.coef_[0], logreg.intercept_)
+
+    feats_contr = np.multiply(coefs, mapped_data)
+    norm_feats_contr = (
+        feats_contr / np.dot(np.absolute(coefs), np.absolute(mapped_data.T))[:, None]
+    )
+
+    expl = pd.DataFrame(
+        norm_feats_contr, index=sf_data.data.index, columns=mapper.transformed_names_
+    )
+    fail_expl = expl.apply(make_clues_failure, axis=1)
+    nofail_expl = expl.apply(make_clues_nofailure, axis=1)
+
+    sf_data.data["fail_expl"] = fail_expl
+    sf_data.data["nofail_expl"] = nofail_expl
+    return sf_data
 
 
 def run(
@@ -186,6 +248,7 @@ def run(
     logging.info(f"{step} - Predicting on {len(predict)} observations.")
     predictions = fit.predict_proba(predict.data)
     predict.data["predicted_probability"] = predictions[:, 1]
+    predict = explain(predict, conf.MODEL_PIPELINE, conf)
 
     logging.info(f"{step} - Exporting prediction data to csv")
 
@@ -193,9 +256,9 @@ def run(
     run_path.mkdir(parents=True, exist_ok=True)
 
     export_destination = f"predictions-{model_id}.csv"
-    predict.data[["siren", "siret", "predicted_probability"]].to_csv(
-        run_path / export_destination, index=False
-    )
+    predict.data[
+        ["siren", "siret", "predicted_probability", "fail_expl", "nofail_expl"]
+    ].to_csv(run_path / export_destination, index=False)
 
     with open(run_path / f"stats-{model_id}.json", "w") as stats_file:
         stats_file.write(json.dumps(model_stats))
