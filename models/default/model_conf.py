@@ -93,6 +93,34 @@ for feature in FEATURES:
             f"Feature '{feature}' is not in VARIABLES nor created by the PIPELINE"
         )
 
+FEATURE_GROUPS = {
+    "sante_financiere": [
+        "financier_court_terme",
+        "interets",
+        "ca",
+        "equilibre_financier",
+        "endettement",
+        "degre_immo_corporelle",
+        "liquidite_reduite",
+        "poids_bfr_exploitation",
+        "productivite_capital_investi",
+        "rentabilite_economique",
+        "rentabilite_nette",
+    ],
+    "activite_partielle": [
+        "apart_heures_consommees_cumulees",
+        "apart_heures_consommees",
+    ],
+    "retards_paiement": [
+        "paydex_group",
+        "paydex_yoy",
+    ],
+    "dette_urssaf": [
+        "ratio_dette",
+        "avg_delta_dette_par_effectif",
+    ]
+}
+        
 # model
 TO_ONEHOT_ENCODE = ["paydex_group"]
 TO_SCALE = list(set(FEATURES) - set(TO_ONEHOT_ENCODE))

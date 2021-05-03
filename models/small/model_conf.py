@@ -60,6 +60,17 @@ FEATURES = [
     "avg_delta_dette_par_effectif",
 ]
 
+FEATURE_GROUPS = {
+    "activite_partielle": [
+        "apart_heures_consommees_cumulees",
+        "apart_heures_consommees",
+    ],
+    "dette_urssaf": [
+        "ratio_dette",
+        "avg_delta_dette_par_effectif",
+    ]
+}
+
 for feature in FEATURES:
     if not check_feature(feature, VARIABLES, TRANSFO_PIPELINE):
         raise ValueError(
