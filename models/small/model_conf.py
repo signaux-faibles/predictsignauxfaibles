@@ -68,7 +68,7 @@ FEATURE_GROUPS = {
     "dette_urssaf": [
         "ratio_dette",
         "avg_delta_dette_par_effectif",
-    ]
+    ],
 }
 
 for feature in FEATURES:

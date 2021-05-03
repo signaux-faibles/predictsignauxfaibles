@@ -135,11 +135,22 @@ def make_clues_nofailure(feat_weights: pd.Series):
     Returns a dict containing the features that most negatively impacted the classification score,
     meaning that they most contribute to the établissement being considered safe, in good standing
     """
-    feat_weights = feat_weights.sort_values(ascending=False)
+    feat_weights = feat_weights.sort_values(ascending=True)
     return feat_weights[feat_weights < 0].to_dict()
 
 
-def explain(sf_data: SFDataset, model_pp: Pipeline, conf: ModuleType):
+def make_group_clues(feat_weights: pd.Series, feat_groups: dict):
+    """
+    Returns a dict containing scores
+    for each group of features to be interfaced
+    """
+    group_weights = {}
+    for (group_name, feat_list) in feat_groups.items():
+        group_weights[group_name] = feat_weights[feat_list].sum()
+    return group_weights
+
+
+def explain(sf_data: SFDataset, conf: ModuleType):  # pylint: disable=too-many-locals
     """
     Provides the relative contribution to the score intensity
     (ie, the term within the sigmoid, which is any real number
@@ -154,8 +165,17 @@ def explain(sf_data: SFDataset, model_pp: Pipeline, conf: ModuleType):
             Each key is a macro variable name, associated to a group of model features.
             The contribution of all features in the value list are considered together.
     """
+    multi_columns = (
+        (group, feat) for (group, feats) in conf.FEATURE_GROUPS for feat in feats
+    )
+    data = pd.DataFrame(
+        sf_data.data[[feat for (group, feat) in multi_columns]], columns=multi_columns
+    )
+
+    model_pp = conf.MODEL_PIPELINE
+
     (_, mapper) = model_pp.steps[0]
-    mapped_data = mapper.transform(sf_data.data)
+    mapped_data = mapper.transform(data)
     mapped_data = np.hstack((mapped_data, np.ones((len(sf_data), 1))))
 
     mapper.transformed_names_[-len(conf.TO_SCALE) : -1] = conf.TO_SCALE
@@ -171,11 +191,16 @@ def explain(sf_data: SFDataset, model_pp: Pipeline, conf: ModuleType):
     expl = pd.DataFrame(
         norm_feats_contr, index=sf_data.data.index, columns=mapper.transformed_names_
     )
+
     fail_expl = expl.apply(make_clues_failure, axis=1)
     nofail_expl = expl.apply(make_clues_nofailure, axis=1)
+    group_expl = expl.apply(
+        lambda x: make_group_clues(x, feat_groups=conf.FEATURE_GROUPS), axis=1
+    )
 
     sf_data.data["fail_expl"] = fail_expl
     sf_data.data["nofail_expl"] = nofail_expl
+    sf_data.data["group_expl"] = group_expl
     return sf_data
 
 
@@ -248,7 +273,7 @@ def run(
     logging.info(f"{step} - Predicting on {len(predict)} observations.")
     predictions = fit.predict_proba(predict.data)
     predict.data["predicted_probability"] = predictions[:, 1]
-    predict = explain(predict, conf.MODEL_PIPELINE, conf)
+    predict = explain(predict, conf)
 
     logging.info(f"{step} - Exporting prediction data to csv")
 
@@ -257,7 +282,14 @@ def run(
 
     export_destination = f"predictions-{model_id}.csv"
     predict.data[
-        ["siren", "siret", "predicted_probability", "fail_expl", "nofail_expl"]
+        [
+            "siren",
+            "siret",
+            "predicted_probability",
+            "fail_expl",
+            "nofail_expl",
+            "group_expl",
+        ]
     ].to_csv(run_path / export_destination, index=False)
 
     with open(run_path / f"stats-{model_id}.json", "w") as stats_file:

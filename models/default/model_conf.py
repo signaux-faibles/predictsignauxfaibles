@@ -118,9 +118,9 @@ FEATURE_GROUPS = {
     "dette_urssaf": [
         "ratio_dette",
         "avg_delta_dette_par_effectif",
-    ]
+    ],
 }
-        
+
 # model
 TO_ONEHOT_ENCODE = ["paydex_group"]
 TO_SCALE = list(set(FEATURES) - set(TO_ONEHOT_ENCODE))
