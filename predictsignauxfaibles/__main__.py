@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import fbeta_score, balanced_accuracy_score
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder
 
 from predictsignauxfaibles.config import OUTPUT_FOLDER, IGNORE_NA
 from predictsignauxfaibles.pipelines import run_pipeline
@@ -121,36 +122,7 @@ def evaluate(
     return {"balanced_accuracy": balanced_accuracy, "fbeta": fbeta}
 
 
-def make_clues_failure(feat_weights: pd.Series):
-    """
-    Returns a dict containing the features that most positively impacted the classification score,
-    meaning that they most contribute to the établissement being considered at-risk
-    """
-    feat_weights = feat_weights.sort_values(ascending=False)
-    return feat_weights[feat_weights > 0].to_dict()
-
-
-def make_clues_nofailure(feat_weights: pd.Series):
-    """
-    Returns a dict containing the features that most negatively impacted the classification score,
-    meaning that they most contribute to the établissement being considered safe, in good standing
-    """
-    feat_weights = feat_weights.sort_values(ascending=True)
-    return feat_weights[feat_weights < 0].to_dict()
-
-
-def make_group_clues(feat_weights: pd.Series, feat_groups: dict):
-    """
-    Returns a dict containing scores
-    for each group of features to be interfaced
-    """
-    group_weights = {}
-    for (group_name, feat_list) in feat_groups.items():
-        group_weights[group_name] = feat_weights[feat_list].sum()
-    return group_weights
-
-
-def explain(sf_data: SFDataset, conf: ModuleType):  # pylint: disable=too-many-locals
+def explain(sf_data: SFDataset, conf: ModuleType): #pylint: disable=too-many-locals
     """
     Provides the relative contribution to the score intensity
     (ie, the term within the sigmoid, which is any real number
@@ -165,21 +137,55 @@ def explain(sf_data: SFDataset, conf: ModuleType):  # pylint: disable=too-many-l
             Each key is a macro variable name, associated to a group of model features.
             The contribution of all features in the value list are considered together.
     """
-    multi_columns = (
-        (group, feat) for (group, feats) in conf.FEATURE_GROUPS for feat in feats
-    )
-    data = pd.DataFrame(
-        sf_data.data[[feat for (group, feat) in multi_columns]], columns=multi_columns
-    )
+    multi_columns = [
+        (group, feat)
+        for (group, feats) in conf.FEATURE_GROUPS.items()
+        for feat in feats
+    ]
+    flat_data = pd.DataFrame(sf_data.data[[feat for (group, feat) in multi_columns]])
+    data = pd.DataFrame(sf_data.data[[feat for (group, feat) in multi_columns]])
+    data.columns = multi_columns
+    data.columns = pd.MultiIndex.from_tuples(data.columns, names=["Group", "Feature"])
+
+    cat_mapping = {}
+    for (group, feats) in conf.FEATURE_GROUPS.items():
+        for feat in feats:
+            if feat not in conf.TO_ONEHOT_ENCODE:
+                continue
+            feat_oh = OneHotEncoder()
+            feat_oh.fit(
+                flat_data[
+                    [
+                        feat,
+                    ]
+                ]
+            )
+            cat_names = feat_oh.get_feature_names().tolist()
+            cat_mapping[(group, feat)] = [feat + "_" + name for name in cat_names]
+
+    cat_to_group = {
+        cat_feat: key[0]
+        for (key, cat_feats) in cat_mapping.items()
+        for cat_feat in cat_feats
+    }
 
     model_pp = conf.MODEL_PIPELINE
 
     (_, mapper) = model_pp.steps[0]
-    mapped_data = mapper.transform(data)
+    mapped_data = mapper.transform(flat_data)
     mapped_data = np.hstack((mapped_data, np.ones((len(sf_data), 1))))
 
-    mapper.transformed_names_[-len(conf.TO_SCALE) : -1] = conf.TO_SCALE
-    mapper.transformed_names_[-1] = "model_offset"
+    mapper.transformed_names_[: -len(conf.TO_SCALE)] = [
+        (cat_to_group[cat_feat], cat_feat)
+        for cat_feat in mapper.transformed_names_[: -len(conf.TO_SCALE)]
+    ]
+    mapper.transformed_names_[-len(conf.TO_SCALE) : -1] = [
+        (group, feat)
+        for (group, feats) in conf.FEATURE_GROUPS.items()
+        for feat in feats
+        if feat in conf.TO_SCALE
+    ]
+    mapper.transformed_names_[-1] = ("model_offset", "model_offset")
     (_, logreg) = model_pp.steps[1]
     coefs = np.append(logreg.coef_[0], logreg.intercept_)
 
@@ -188,20 +194,32 @@ def explain(sf_data: SFDataset, conf: ModuleType):  # pylint: disable=too-many-l
         feats_contr / np.dot(np.absolute(coefs), np.absolute(mapped_data.T))[:, None]
     )
 
+    multi_columns = []
+    for (group, feats) in conf.FEATURE_GROUPS.items():
+        for feat in feats:
+            if (group, feat) in cat_mapping.keys():
+                for cat_feat in cat_mapping[(group, feat)]:
+                    multi_columns.append((group, cat_feat))
+            else:
+                multi_columns.append((group, feat))
+    multi_columns.append(("model_offset", "model_offset"))
+
     expl = pd.DataFrame(
-        norm_feats_contr, index=sf_data.data.index, columns=mapper.transformed_names_
+        norm_feats_contr, index=data.index, columns=mapper.transformed_names_
     )
+    expl = expl[multi_columns]
+    expl.columns = pd.MultiIndex.from_tuples(expl.columns, names=["Group", "Feature"])
 
-    fail_expl = expl.apply(make_clues_failure, axis=1)
-    nofail_expl = expl.apply(make_clues_nofailure, axis=1)
-    group_expl = expl.apply(
-        lambda x: make_group_clues(x, feat_groups=conf.FEATURE_GROUPS), axis=1
+    group_expls = expl.apply(lambda x: x.groupby(by="Group").sum(), axis=1)
+    group_expls.columns = [("expl", group) for group in group_expls.columns]
+    group_expls.columns = pd.MultiIndex.from_tuples(
+        group_expls.columns, names=["expl", "feat_group"]
     )
+    expl.drop([("model_offset", "model_offset")], axis=1, inplace=True)
+    expl = expl.merge(group_expls, left_index=True, right_index=True)
+    expl.columns = pd.MultiIndex.from_tuples(expl.columns, names=["group", "feat"])
 
-    sf_data.data["fail_expl"] = fail_expl
-    sf_data.data["nofail_expl"] = nofail_expl
-    sf_data.data["group_expl"] = group_expl
-    return sf_data
+    return expl
 
 
 def run(
@@ -273,7 +291,8 @@ def run(
     logging.info(f"{step} - Predicting on {len(predict)} observations.")
     predictions = fit.predict_proba(predict.data)
     predict.data["predicted_probability"] = predictions[:, 1]
-    predict = explain(predict, conf)
+    expl = explain(predict, conf)
+    predict = predict.merge(expl, left_index=True, right_index=True)
 
     logging.info(f"{step} - Exporting prediction data to csv")
 
