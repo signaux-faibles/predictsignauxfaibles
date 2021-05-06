@@ -122,7 +122,7 @@ def evaluate(
     return {"balanced_accuracy": balanced_accuracy, "fbeta": fbeta}
 
 
-def explain(sf_data: SFDataset, conf: ModuleType): #pylint: disable=too-many-locals
+def explain(sf_data: SFDataset, conf: ModuleType):  # pylint: disable=too-many-locals
     """
     Provides the relative contribution to the score intensity
     (ie, the term within the sigmoid, which is any real number
@@ -204,22 +204,21 @@ def explain(sf_data: SFDataset, conf: ModuleType): #pylint: disable=too-many-loc
                 multi_columns.append((group, feat))
     multi_columns.append(("model_offset", "model_offset"))
 
-    expl = pd.DataFrame(
+    micro_expl = pd.DataFrame(
         norm_feats_contr, index=data.index, columns=mapper.transformed_names_
     )
-    expl = expl[multi_columns]
-    expl.columns = pd.MultiIndex.from_tuples(expl.columns, names=["Group", "Feature"])
-
-    group_expls = expl.apply(lambda x: x.groupby(by="Group").sum(), axis=1)
-    group_expls.columns = [("expl", group) for group in group_expls.columns]
-    group_expls.columns = pd.MultiIndex.from_tuples(
-        group_expls.columns, names=["expl", "feat_group"]
+    micro_expl = micro_expl[multi_columns]
+    micro_expl.columns = pd.MultiIndex.from_tuples(
+        micro_expl.columns, names=["Group", "Feature"]
     )
-    expl.drop([("model_offset", "model_offset")], axis=1, inplace=True)
-    expl = expl.merge(group_expls, left_index=True, right_index=True)
-    expl.columns = pd.MultiIndex.from_tuples(expl.columns, names=["group", "feat"])
 
-    return expl
+    macro_expl = micro_expl.apply(lambda x: x.groupby(by="Group").sum(), axis=1)
+
+    sf_data.data["macro_expl"] = macro_expl.apply(lambda x: x.to_dict(), axis=1)
+    micro_expl.columns = micro_expl.columns.droplevel()
+    sf_data.data["micro_expl"] = micro_expl.apply(lambda x: x.to_dict(), axis=1)
+
+    return sf_data
 
 
 def run(
@@ -291,8 +290,7 @@ def run(
     logging.info(f"{step} - Predicting on {len(predict)} observations.")
     predictions = fit.predict_proba(predict.data)
     predict.data["predicted_probability"] = predictions[:, 1]
-    expl = explain(predict, conf)
-    predict = predict.merge(expl, left_index=True, right_index=True)
+    predict = explain(predict, conf)
 
     logging.info(f"{step} - Exporting prediction data to csv")
 
@@ -305,9 +303,8 @@ def run(
             "siren",
             "siret",
             "predicted_probability",
-            "fail_expl",
-            "nofail_expl",
-            "group_expl",
+            "macro_expl",
+            "micro_expl",
         ]
     ].to_csv(run_path / export_destination, index=False)
 
