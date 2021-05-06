@@ -122,20 +122,20 @@ def evaluate(
     return {"balanced_accuracy": balanced_accuracy, "fbeta": fbeta}
 
 
-def explain(sf_data: SFDataset, conf: ModuleType):  # pylint: disable=too-many-locals
+def explain(sf_data: SFDataset, conf: ModuleType):  # pylint: disable=too-many-locals, anomalous-backslash-in-string
     """
-    Provides the relative contribution to the score intensity
-    (ie, the term within the sigmoid, which is any real number
-    that will later be brought to [0,1] by the sigmoid)
+    Provides the relative contribution of each features to the risk score,
+    as well as relative contributions for each group of features,
+    as defined in a the model configuration file.
+    This relative contribution of feature $i$ to the score
+    for company $s$, for reglog parameter $\beta$ is defined by:
+    $expl_i(s) = \frac{\beta_i * s_i}{|\beta_0| + \sum_{j=1}^{N}{|{\beta_1}_j||s_j|}}$
+    $expl_0(s) = \frac{\beta_0}{|\beta_0| + \sum_{j=1}^{N}{|{\beta_1}_j||s_j|}}$
     Arguments:
-        lr: LogisticRegression
-            The LogReg that has been used to train the model
-        etab: pd.Series
-            A Series containing all features of the etablissement that were input to the LogReg
-        feat_groups: dict
-            A dictionnary mapping macro features to lists of features.
-            Each key is a macro variable name, associated to a group of model features.
-            The contribution of all features in the value list are considered together.
+        sf_data: SFDataset
+            A SFDataset containing predictions produced by a logistic regression
+        conf: ModuleType
+            The model configuration file used for predictions
     """
     multi_columns = [
         (group, feat)
@@ -147,6 +147,7 @@ def explain(sf_data: SFDataset, conf: ModuleType):  # pylint: disable=too-many-l
     data.columns = multi_columns
     data.columns = pd.MultiIndex.from_tuples(data.columns, names=["Group", "Feature"])
 
+    # Mapping categorical vairables to their oh-encoded level variables
     cat_mapping = {}
     for (group, feats) in conf.FEATURE_GROUPS.items():
         for feat in feats:
@@ -175,6 +176,7 @@ def explain(sf_data: SFDataset, conf: ModuleType):  # pylint: disable=too-many-l
     mapped_data = mapper.transform(flat_data)
     mapped_data = np.hstack((mapped_data, np.ones((len(sf_data), 1))))
 
+    # Correctly naming each column of transformed_names_
     mapper.transformed_names_[: -len(conf.TO_SCALE)] = [
         (cat_to_group[cat_feat], cat_feat)
         for cat_feat in mapper.transformed_names_[: -len(conf.TO_SCALE)]
