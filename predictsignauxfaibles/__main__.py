@@ -122,15 +122,17 @@ def evaluate(
     return {"balanced_accuracy": balanced_accuracy, "fbeta": fbeta}
 
 
-def explain(sf_data: SFDataset, conf: ModuleType):  # pylint: disable=too-many-locals, anomalous-backslash-in-string
+def explain(
+    sf_data: SFDataset, conf: ModuleType
+):  # pylint: disable=too-many-locals
     """
     Provides the relative contribution of each features to the risk score,
     as well as relative contributions for each group of features,
     as defined in a the model configuration file.
     This relative contribution of feature $i$ to the score
     for company $s$, for reglog parameter $\beta$ is defined by:
-    $expl_i(s) = \frac{\beta_i * s_i}{|\beta_0| + \sum_{j=1}^{N}{|{\beta_1}_j||s_j|}}$
-    $expl_0(s) = \frac{\beta_0}{|\beta_0| + \sum_{j=1}^{N}{|{\beta_1}_j||s_j|}}$
+    expl_i(s) = frac{beta_i * s_i}{|beta_0| + sum_{j=1}^{N}{|{beta_1}_j||s_j|}}
+    expl_0(s) = frac{beta_0}{|beta_0| + sum_{j=1}^{N}{|{beta_1}_j||s_j|}}
     Arguments:
         sf_data: SFDataset
             A SFDataset containing predictions produced by a logistic regression
