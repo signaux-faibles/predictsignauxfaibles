@@ -33,7 +33,7 @@ ARGS_TO_ATTRS = {
     "test_from": ("test", "date_min"),
     "test_to": ("test", "date_max"),
     "predict_on": ("predict", "date_min"),
-    "predict_siret_list": ("predict", "siret"),
+    "predict_siret_list": ("predict", "sirets"),
 }
 
 
