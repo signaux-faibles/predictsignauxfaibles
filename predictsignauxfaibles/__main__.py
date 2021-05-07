@@ -6,6 +6,7 @@ from pathlib import Path
 import sys
 from types import ModuleType
 
+import pandas as pd
 from sklearn.metrics import fbeta_score, balanced_accuracy_score
 from sklearn.pipeline import Pipeline
 
@@ -32,6 +33,7 @@ ARGS_TO_ATTRS = {
     "test_from": ("test", "date_min"),
     "test_to": ("test", "date_max"),
     "predict_on": ("predict", "date_min"),
+    "predict_siret_list": ("predict", "siret"),
 }
 
 
@@ -53,6 +55,10 @@ def get_train_test_predict_datasets(args_ns: argparse.Namespace, conf: ModuleTyp
         "test": conf.TEST_DATASET,
         "predict": conf.PREDICT_DATASET,
     }
+
+    if args_ns.predict_siret_list is not None:
+        predict_siret_list = pd.read_csv(args_ns.predict_siret_list).siret.tolist()
+        set_if_not_none(datasets["predict"], "siret", predict_siret_list)
 
     args_dict = vars(args_ns)
     for (arg, dest) in ARGS_TO_ATTRS.items():
@@ -257,6 +263,12 @@ def make_parser():
         type=int,
         dest="predict_spl_size",
         help="The sample size to predict on",
+    )
+    predict_args.add_argument(
+        "--predict_siret_list",
+        type=str,
+        dest="predict_siret_list",
+        help="If provided a csv list of SIRETs, will predict on these specific SIRET",
     )
     predict_args.add_argument(
         "--predict_on",
