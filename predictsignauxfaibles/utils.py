@@ -182,7 +182,7 @@ def load_conf(model_name: str = "default"):
     Args:
         model_name: str
     """
-    conf_filepath = Path("../models") / model_name / "model_conf.py"
+    conf_filepath = Path("./models") / model_name / "model_conf.py"
     if not conf_filepath.exists():
         raise ValueError(f"{conf_filepath} does not exist")
 
