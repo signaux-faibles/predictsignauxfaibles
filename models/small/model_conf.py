@@ -8,6 +8,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn_pandas import DataFrameMapper
 
+from predictsignauxfaibles.data import SFDataset, OversampledSFDataset
 from predictsignauxfaibles.pipelines import SMALL_PIPELINE
 from predictsignauxfaibles.utils import check_feature
 
@@ -92,15 +93,34 @@ TRAIN_FROM = "2016-01-01"
 TRAIN_TO = "2018-06-30"
 TRAIN_SAMPLE_SIZE = 1_000_000 if ENV == "prod" else 5_000
 TRAIN_OVERSAMPLING = 0.2
+TRAIN_DATASET = OversampledSFDataset(
+    TRAIN_OVERSAMPLING,
+    date_min=TRAIN_FROM,
+    date_max=TRAIN_TO,
+    fields=VARIABLES,
+    sample_size=TRAIN_SAMPLE_SIZE,
+)
 
 # Test Dataset
 TEST_FROM = "2018-07-01"
 TEST_TO = "2018-10-31"
 TEST_SAMPLE_SIZE = 250_000 if ENV == "prod" else 5_000
+TEST_DATASET = SFDataset(
+    date_min=TEST_FROM,
+    date_max=TEST_TO,
+    fields=VARIABLES,
+    sample_size=TEST_SAMPLE_SIZE,
+)
 
 # Predict Dataset
 PREDICT_ON = "2020-02-01"
 PREDICT_SAMPLE_SIZE = 1_000_000_000 if ENV == "prod" else 5_000
+PREDICT_DATASET = SFDataset(
+    date_min=PREDICT_ON,
+    date_max=PREDICT_ON[:-2] + "28",
+    fields=VARIABLES,
+    sample_size=PREDICT_SAMPLE_SIZE,
+)
 
 # Evaluation parameters
 EVAL_BETA = 2
