@@ -3,18 +3,16 @@ from datetime import datetime
 import json
 import logging
 from pathlib import Path
-import pickle
 import sys
 from types import ModuleType
 
 import pandas as pd
+from sklearn.metrics import fbeta_score, balanced_accuracy_score
 
 from predictsignauxfaibles.config import OUTPUT_FOLDER, IGNORE_NA
-from predictsignauxfaibles.data import SFDataset
-from predictsignauxfaibles.explainability import explain
-from predictsignauxfaibles.evaluate import evaluate
 from predictsignauxfaibles.pipelines import run_pipeline
 from predictsignauxfaibles.utils import set_if_not_none, load_conf
+from predictsignauxfaibles.data import SFDataset
 
 sys.path.append("../")
 
@@ -33,7 +31,7 @@ ARGS_TO_ATTRS = {
     "test_from": ("test", "date_min"),
     "test_to": ("test", "date_max"),
     "predict_on": ("predict", "date_min"),
-    "predict_siret_list": ("predict", "sirets"),
+    "predict_siret_list": ("predict", "siret"),
 }
 
 
@@ -87,6 +85,22 @@ def make_stats(train: SFDataset, test: SFDataset, predict: SFDataset):
         stats[arg] = getattr(datasets[dest[0]], dest[1])
 
     return stats
+
+
+def evaluate(
+    model, dataset, beta
+):  # To be turned into a SFModel method when refactoring models
+    """
+    Returns evaluation metrics of model evaluated on df
+    Args:
+        model: a sklearn-like model with a predict method
+        df: dataset
+    """
+    balanced_accuracy = balanced_accuracy_score(
+        dataset.data["outcome"], model.predict(dataset.data)
+    )
+    fbeta = fbeta_score(dataset.data["outcome"], model.predict(dataset.data), beta=beta)
+    return {"balanced_accuracy": balanced_accuracy, "fbeta": fbeta}
 
 
 def run(
@@ -159,39 +173,18 @@ def run(
     predictions = fit.predict_proba(predict.data)
     predict.data["predicted_probability"] = predictions[:, 1]
 
-    if args.explain:
-        logging.info(f"{step} - Computing score explanations")
-        predict = explain(predict, conf)
-
     logging.info(f"{step} - Exporting prediction data to csv")
 
-    run_path = Path(OUTPUT_FOLDER) / f"{args.model_name}_{model_id}"
+    run_path = Path(OUTPUT_FOLDER) / model_id
     run_path.mkdir(parents=True, exist_ok=True)
 
-    export_destination = "predictions.csv"
+    export_destination = f"predictions-{model_id}.csv"
+    predict.data[["siren", "siret", "predicted_probability"]].to_csv(
+        run_path / export_destination, index=False
+    )
 
-    export_columns = [
-        "siren",
-        "siret",
-        "predicted_probability",
-    ]
-    if args.explain:
-        export_columns += [
-            "expl_selection",
-            "macro_expl",
-            "micro_expl",
-            "macro_radar",
-        ]
-
-    predict.data[export_columns].to_csv(run_path / export_destination, index=False)
-
-    with open(run_path / "stats.json", "w") as stats_file:
+    with open(run_path / f"stats-{model_id}.json", "w") as stats_file:
         stats_file.write(json.dumps(model_stats))
-
-    if args.save_model:
-        for comp_id, model_component in enumerate(conf.MODEL_PIPELINE.steps):
-            comp_filename = f"model_comp{comp_id}.pickle"
-            pickle.dump(model_component, open(run_path / comp_filename, "wb"))
 
 
 def make_parser():
@@ -205,11 +198,6 @@ def make_parser():
         type=str,
         default="default",
         help="The model to use for prediction. If not provided, models 'default' will be used",
-    )
-    parser.add_argument(
-        "--save_model",
-        action="store_true",
-        help="If this option is provided, model parameters will be saved",
     )
 
     train_args = parser.add_argument_group("Train dataset")
@@ -276,13 +264,6 @@ def make_parser():
         help="""
         Predict on all companies for the month specified.
         To predict on April 2021, provide any date such as '2021-04-01'
-        """,
-    )
-    predict_args.add_argument(
-        "--explain",
-        action="store_true",
-        help="""
-        If provided, the contribution of features to model predictions will be computed and added to the output
         """,
     )
 
