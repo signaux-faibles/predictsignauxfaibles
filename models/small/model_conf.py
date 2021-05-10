@@ -53,13 +53,6 @@ VARIABLES += ["outcome", "periode", "siret", "siren", "time_til_outcome", "code_
 TRANSFO_PIPELINE = SMALL_PIPELINE
 
 # features
-FEATURES = [
-    "apart_heures_consommees_cumulees",
-    "apart_heures_consommees",
-    "ratio_dette",
-    "avg_delta_dette_par_effectif",
-]
-
 FEATURE_GROUPS = {
     "activite_partielle": [
         "apart_heures_consommees_cumulees",
@@ -70,6 +63,8 @@ FEATURE_GROUPS = {
         "avg_delta_dette_par_effectif",
     ],
 }
+
+FEATURES = [feat for feat in group_feats for group_feats in FEATURE_GROUPS.values()]
 
 for feature in FEATURES:
     if not check_feature(feature, VARIABLES, TRANSFO_PIPELINE):
