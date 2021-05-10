@@ -179,23 +179,15 @@ def run(
 
     logging.info(f"{step} - Exporting prediction data to csv")
 
-    run_path = Path(OUTPUT_FOLDER) / model_id
+    run_path = Path(OUTPUT_FOLDER) / f"{args.model_name}_{model_id}"
     run_path.mkdir(parents=True, exist_ok=True)
 
-    export_destination = f"predictions-{model_id}.csv"
-    predict.data[
-        [
-            "siren",
-            "siret",
-            "predicted_probability",
-            "expl_selection",
-            "macro_expl",
-            "micro_expl",
-            "macro_radar",
-        ]
-    ].to_csv(run_path / export_destination, index=False)
+    export_destination = "predictions.csv"
+    predict.data[["siren", "siret", "predicted_probability"]].to_csv(
+        run_path / export_destination, index=False
+    )
 
-    with open(run_path / f"stats-{model_id}.json", "w") as stats_file:
+    with open(run_path / "stats.json", "w") as stats_file:
         stats_file.write(json.dumps(model_stats))
 
 
