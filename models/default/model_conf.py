@@ -93,6 +93,7 @@ FEATURE_GROUPS = {
         "ratio_dette",
         "avg_delta_dette_par_effectif",
     ],
+    "miscellaneous": [],
 }
 
 FEATURES = [feat for feat in group_feats for group_feats in FEATURE_GROUPS.values()]
