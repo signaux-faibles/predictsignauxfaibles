@@ -7,11 +7,8 @@ import sys
 import logging
 from types import ModuleType
 
-import numpy as np
-import pandas as pd
 from sklearn.metrics import fbeta_score, balanced_accuracy_score
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder
 
 from predictsignauxfaibles.config import OUTPUT_FOLDER, IGNORE_NA
 from predictsignauxfaibles.pipelines import run_pipeline
