@@ -5,6 +5,7 @@ import pandas as pd
 from sklearn.preprocessing import OneHotEncoder
 
 from predictsignauxfaibles.data import SFDataset
+from predictsignauxfaibles.utils import sigmoid
 
 
 def explain(sf_data: SFDataset, conf: ModuleType):  # pylint: disable=too-many-locals
@@ -27,7 +28,11 @@ def explain(sf_data: SFDataset, conf: ModuleType):  # pylint: disable=too-many-l
         for (group, feats) in conf.FEATURE_GROUPS.items()
         for feat in feats
     ]
+    # Creating a flat version of our group-feature hierarchy
     flat_data = pd.DataFrame(sf_data.data[[feat for (group, feat) in multi_columns]])
+
+    # Creating a multi-indexed-columns version of our dataset
+    # where features are listed in the same order as in conf.FEATURE_GROUPS
     data = pd.DataFrame(sf_data.data[[feat for (group, feat) in multi_columns]])
     data.columns = multi_columns
     data.columns = pd.MultiIndex.from_tuples(data.columns, names=["Group", "Feature"])
@@ -49,12 +54,30 @@ def explain(sf_data: SFDataset, conf: ModuleType):  # pylint: disable=too-many-l
             cat_names = feat_oh.get_feature_names().tolist()
             cat_mapping[(group, feat)] = [feat + "_" + name for name in cat_names]
 
+    # The reverse mapping with help us as well
     cat_to_group = {
         cat_feat: key[0]
         for (key, cat_feats) in cat_mapping.items()
         for cat_feat in cat_feats
     }
 
+    # Finally, let's create a list of tuples that we'll use
+    # to multi-index our columns...
+    multi_columns = []
+    for (group, feats) in conf.FEATURE_GROUPS.items():
+        for feat in feats:
+            if (group, feat) in cat_mapping.keys():
+                for cat_feat in cat_mapping[(group, feat)]:
+                    multi_columns.append((group, cat_feat))
+            else:
+                multi_columns.append((group, feat))
+    multi_columns.append(("model_offset", "model_offset"))
+
+    ## COLUMNS NAMES REGISTRATION & MAPPING
+    # Our model's mapper uses a OneHotEncoder to generate binary variables
+    # from categorical ones. It creates new columns that we must register and
+    # map to our groups in order to compute the total contribution of each
+    # group to our risk prediction
     model_pp = conf.MODEL_PIPELINE
 
     (_, mapper) = model_pp.steps[0]
@@ -73,23 +96,32 @@ def explain(sf_data: SFDataset, conf: ModuleType):  # pylint: disable=too-many-l
         if feat in conf.TO_SCALE
     ]
     mapper.transformed_names_[-1] = ("model_offset", "model_offset")
+
+    ## COMPUTING CONTRIBUTIONS FROM OUR LOGISTIC REGRESSION
     (_, logreg) = model_pp.steps[1]
     coefs = np.append(logreg.coef_[0], logreg.intercept_)
 
+    ## ABSOLUTE CONTRIBUTIONS are used for radar plots
     feats_contr = np.multiply(coefs, mapped_data)
+    offset_feats_contr = feats_contr - logreg.intercept_ / coefs.size
+    micro_radar = pd.DataFrame(
+        offset_feats_contr, index=data.index, columns=mapper.transformed_names_
+    )
+    micro_radar = micro_radar[multi_columns]
+    micro_radar.columns = pd.MultiIndex.from_tuples(
+        micro_radar.columns, names=["Group", "Feature"]
+    )
+    ## Aggregating contributions at the group level
+    # and applying sigmoid provides the radar score for each group
+    macro_radar = micro_radar.apply(
+        lambda x: sigmoid(x.groupby(by="Group").sum()), axis=1
+    )
+    sf_data.data["macro_radar"] = macro_radar.apply(lambda x: x.to_dict(), axis=1)
+
+    ## RELATIVE CONTRIBUTIONS are used for explanations
     norm_feats_contr = (
         feats_contr / np.dot(np.absolute(coefs), np.absolute(mapped_data.T))[:, None]
     )
-
-    multi_columns = []
-    for (group, feats) in conf.FEATURE_GROUPS.items():
-        for feat in feats:
-            if (group, feat) in cat_mapping.keys():
-                for cat_feat in cat_mapping[(group, feat)]:
-                    multi_columns.append((group, cat_feat))
-            else:
-                multi_columns.append((group, feat))
-    multi_columns.append(("model_offset", "model_offset"))
 
     micro_expl = pd.DataFrame(
         norm_feats_contr, index=data.index, columns=mapper.transformed_names_
@@ -98,10 +130,12 @@ def explain(sf_data: SFDataset, conf: ModuleType):  # pylint: disable=too-many-l
     micro_expl.columns = pd.MultiIndex.from_tuples(
         micro_expl.columns, names=["Group", "Feature"]
     )
-
     macro_expl = micro_expl.apply(lambda x: x.groupby(by="Group").sum(), axis=1)
 
+    # Aggregating contributions at the group level
     sf_data.data["macro_expl"] = macro_expl.apply(lambda x: x.to_dict(), axis=1)
+
+    # Flatten micro_expl and store the contribution of each feature
     micro_expl.columns = micro_expl.columns.droplevel()
     sf_data.data["micro_expl"] = micro_expl.apply(lambda x: x.to_dict(), axis=1)
 

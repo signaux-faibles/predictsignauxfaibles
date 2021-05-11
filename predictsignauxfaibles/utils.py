@@ -1,4 +1,5 @@
 import logging
+import math
 from typing import NamedTuple, List
 
 from datetime import datetime
@@ -173,3 +174,8 @@ def set_if_not_none(obj, attr, val):
     """
     if val is not None:
         setattr(obj, attr, val)
+
+
+def sigmoid(flt: float):
+    """Returns the sigmoid of flt"""
+    return 1 / (1 + math.exp(-flt))

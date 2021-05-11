@@ -14,7 +14,7 @@ from predictsignauxfaibles.config import OUTPUT_FOLDER, IGNORE_NA
 from predictsignauxfaibles.pipelines import run_pipeline
 from predictsignauxfaibles.utils import set_if_not_none
 from predictsignauxfaibles.data import SFDataset
-from predictsignauxfaibles.explicability import explain
+from predictsignauxfaibles.explainability import explain
 
 sys.path.append("../")
 
