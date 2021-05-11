@@ -8,7 +8,21 @@ from predictsignauxfaibles.data import SFDataset
 from predictsignauxfaibles.utils import sigmoid
 
 
-def explain(sf_data: SFDataset, conf: ModuleType):  # pylint: disable=too-many-locals
+def contribution_to_score(entry: pd.Series):
+    """
+    Computed the (virtual) contribution to the (post-logistic) score of a group of features.
+    This score, between 0 and 1, is only used for interfacing group contributions with radar plots.
+    This score is not interpretable quantitatively.
+    To obtain the relative contribution of each group of feature in an exact way,
+    please use field macro_expl
+    """
+    group_contrs = entry.groupby(by="Group").sum()
+    return group_contrs.apply(sigmoid)
+
+
+def explain(
+    sf_data: SFDataset, conf: ModuleType, thresh_micro: float = 0.07
+):  # pylint: disable=too-many-statements, too-many-locals
     """
     Provides the relative contribution of each features to the risk score,
     as well as relative contributions for each group of features,
@@ -101,8 +115,30 @@ def explain(sf_data: SFDataset, conf: ModuleType):  # pylint: disable=too-many-l
     (_, logreg) = model_pp.steps[1]
     coefs = np.append(logreg.coef_[0], logreg.intercept_)
 
-    ## ABSOLUTE CONTRIBUTIONS are used for radar plots
+    ## ABSOLUTE CONTRIBUTIONS are used to select the features
+    # that significantly contribute to our risk score
     feats_contr = np.multiply(coefs, mapped_data)
+    micro_prod = pd.DataFrame(
+        feats_contr, index=data.index, columns=mapper.transformed_names_
+    )
+    micro_prod = micro_prod[multi_columns]
+    micro_prod.columns = pd.MultiIndex.from_tuples(
+        micro_prod.columns, names=["Group", "Feature"]
+    )
+    micro_select_concerning = micro_prod.mask(micro_prod >= 4 * thresh_micro).apply(
+        lambda s: s[s.isnull()].index.tolist(), axis=1
+    )
+    micro_select_reassuring = micro_prod.mask(micro_prod <= -4 * thresh_micro).apply(
+        lambda s: s[s.isnull()].index.tolist(), axis=1
+    )
+
+    micro_select = micro_select_concerning.to_frame(name="select_concerning").join(
+        micro_select_reassuring.to_frame(name="select_reassuring")
+    )
+    sf_data.data["expl_selection"] = micro_select.apply(lambda s: s.to_dict(), axis=1)
+
+    ## OFFSET ABSOLUTE CONTRIBUTIONS are used for radar plots
+    # and to select contributive micro-variables to show in front-end
     offset_feats_contr = feats_contr - logreg.intercept_ / coefs.size
     micro_radar = pd.DataFrame(
         offset_feats_contr, index=data.index, columns=mapper.transformed_names_
@@ -113,12 +149,11 @@ def explain(sf_data: SFDataset, conf: ModuleType):  # pylint: disable=too-many-l
     )
     ## Aggregating contributions at the group level
     # and applying sigmoid provides the radar score for each group
-    macro_radar = micro_radar.apply(
-        lambda x: sigmoid(x.groupby(by="Group").sum()), axis=1
-    )
+    macro_radar = micro_radar.apply(contribution_to_score, axis=1)
     sf_data.data["macro_radar"] = macro_radar.apply(lambda x: x.to_dict(), axis=1)
 
-    ## RELATIVE CONTRIBUTIONS are used for explanations
+    ## RELATIVE CONTRIBUTIONS are used to provide explanations
+    # as full-text on the front-end
     norm_feats_contr = (
         feats_contr / np.dot(np.absolute(coefs), np.absolute(mapped_data.T))[:, None]
     )
