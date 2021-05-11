@@ -202,8 +202,10 @@ def run(
             "siren",
             "siret",
             "predicted_probability",
+            "expl_selection",
             "macro_expl",
             "micro_expl",
+            "macro_radar",
         ]
     ].to_csv(run_path / export_destination, index=False)
 
