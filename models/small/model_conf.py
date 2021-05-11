@@ -65,7 +65,7 @@ FEATURE_GROUPS = {
     "miscellaneous": [],
 }
 
-FEATURES = [feat for feat in group_feats for group_feats in FEATURE_GROUPS.values()]
+FEATURES = [feat for group_feats in FEATURE_GROUPS.values() for feat in group_feats]
 
 for feature in FEATURES:
     if not check_feature(feature, VARIABLES, TRANSFO_PIPELINE):
