@@ -189,6 +189,7 @@ def run(
     logging.info(f"{step} - Predicting on {len(predict)} observations.")
     predictions = fit.predict_proba(predict.data)
     predict.data["predicted_probability"] = predictions[:, 1]
+    logging.info(f"{step} - Computing score explanations")
     predict = explain(predict, conf)
 
     logging.info(f"{step} - Exporting prediction data to csv")
