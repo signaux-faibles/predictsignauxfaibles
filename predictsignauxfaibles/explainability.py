@@ -17,7 +17,9 @@ def contribution_to_score(entry: pd.Series):
     please use field macro_expl
     """
     group_contrs = entry.groupby(by="Group").sum()
-    return group_contrs.apply(sigmoid)
+    return group_contrs[group_contrs.index != "model_offset"].apply(
+        lambda x: 1 - sigmoid(x)
+    )
 
 
 def explain(
