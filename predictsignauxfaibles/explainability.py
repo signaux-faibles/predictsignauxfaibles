@@ -50,8 +50,7 @@ def explain(
     # Creating a multi-indexed-columns version of our dataset
     # where features are listed in the same order as in conf.FEATURE_GROUPS
     data = pd.DataFrame(sf_data.data[[feat for (group, feat) in multi_columns]])
-    data.columns = multi_columns
-    data.columns = pd.MultiIndex.from_tuples(data.columns, names=["Group", "Feature"])
+    data.columns = pd.MultiIndex.from_tuples(multi_columns, names=["Group", "Feature"])
 
     # Mapping categorical vairables to their oh-encoded level variables
     cat_mapping = {}
