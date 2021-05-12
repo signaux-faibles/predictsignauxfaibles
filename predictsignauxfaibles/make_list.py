@@ -1,16 +1,5 @@
 # pylint: disable=all
-from types import ModuleType
-
-import numpy as np
 import pandas as pd
-from sklearn.metrics import precision_recall_curve, fbeta_score
-from sklearn.pipeline import Pipeline
-from sklearn_pandas import DataFrameMapper
-from tqdm import tqdm
-
-from predictsignauxfaibles.config import IGNORE_NA
-from predictsignauxfaibles.data import SFDataset
-from predictsignauxfaibles.pipelines import run_pipeline
 
 
 def merge_models(model_list: list):
