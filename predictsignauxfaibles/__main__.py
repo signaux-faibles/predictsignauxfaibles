@@ -1,9 +1,9 @@
 import argparse
 from datetime import datetime
 import json
+import logging
 from pathlib import Path
 import sys
-import logging
 from types import ModuleType
 
 from sklearn.metrics import fbeta_score, balanced_accuracy_score

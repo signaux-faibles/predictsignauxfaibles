@@ -2,8 +2,8 @@ from datetime import datetime
 import importlib.util
 import logging
 import math
-from pathlib import Path
 from typing import NamedTuple, List
+from pathlib import Path
 import pytz
 
 
