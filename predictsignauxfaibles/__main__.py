@@ -3,6 +3,7 @@ from datetime import datetime
 import json
 import logging
 from pathlib import Path
+import pickle
 import sys
 from types import ModuleType
 
@@ -190,6 +191,11 @@ def run(
     with open(run_path / "stats.json", "w") as stats_file:
         stats_file.write(json.dumps(model_stats))
 
+    if args.save_model:
+        for comp_id, model_component in enumerate(conf.MODEL_PIPELINE.steps):
+            comp_filename = f"model_comp{comp_id}.pickle"
+            pickle.dump(model_component, open(run_path / comp_filename, "wb"))
+
 
 def make_parser():
     """
@@ -202,6 +208,11 @@ def make_parser():
         type=str,
         default="default",
         help="The model to use for prediction. If not provided, models 'default' will be used",
+    )
+    parser.add_argument(
+        "--save_model",
+        action="store_true",
+        help="If this option is provided, model parameters will be saved",
     )
 
     train_args = parser.add_argument_group("Train dataset")
