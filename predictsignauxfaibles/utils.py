@@ -1,8 +1,9 @@
+from datetime import datetime
+import importlib.util
 import logging
 import math
+from pathlib import Path
 from typing import NamedTuple, List
-
-from datetime import datetime
 import pytz
 
 
@@ -179,3 +180,21 @@ def set_if_not_none(obj, attr, val):
 def sigmoid(flt: float):
     """Returns the sigmoid of flt"""
     return 1 / (1 + math.exp(-flt))
+
+
+def load_conf(model_name: str = "default"):
+    """
+    Loads a model configuration from a model name
+    Args:
+        model_name: str
+    """
+    conf_filepath = Path("./models") / model_name / "model_conf.py"
+    if not conf_filepath.exists():
+        raise ValueError(f"{conf_filepath} does not exist")
+
+    spec = importlib.util.spec_from_file_location(
+        f"models.{model_name}.model_conf", conf_filepath
+    )
+    model_conf = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(model_conf)  # pylint: disable=wrong-import-position
+    return model_conf
