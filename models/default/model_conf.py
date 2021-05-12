@@ -67,31 +67,43 @@ VARIABLES += ["outcome", "periode", "siret", "siren", "time_til_outcome", "code_
 TRANSFO_PIPELINE = DEFAULT_PIPELINE
 
 # features
-FEATURES = [
-    "apart_heures_consommees_cumulees",
-    "apart_heures_consommees",
-    "ratio_dette",
-    "avg_delta_dette_par_effectif",
-    "paydex_group",
-    "paydex_yoy",
-    "financier_court_terme",
-    "interets",
-    "ca",
-    "equilibre_financier",
-    "endettement",
-    "degre_immo_corporelle",
-    "liquidite_reduite",
-    "poids_bfr_exploitation",
-    "productivite_capital_investi",
-    "rentabilite_economique",
-    "rentabilite_nette",
-]
+FEATURE_GROUPS = {
+    "sante_financiere": [
+        "financier_court_terme",
+        "interets",
+        "ca",
+        "equilibre_financier",
+        "endettement",
+        "degre_immo_corporelle",
+        "liquidite_reduite",
+        "poids_bfr_exploitation",
+        "productivite_capital_investi",
+        "rentabilite_economique",
+        "rentabilite_nette",
+    ],
+    "activite_partielle": [
+        "apart_heures_consommees_cumulees",
+        "apart_heures_consommees",
+    ],
+    "retards_paiement": [
+        "paydex_group",
+        "paydex_yoy",
+    ],
+    "dette_urssaf": [
+        "ratio_dette",
+        "avg_delta_dette_par_effectif",
+    ],
+    "miscellaneous": [],
+}
+
+FEATURES = [feat for group_feats in FEATURE_GROUPS.values() for feat in group_feats]
 
 for feature in FEATURES:
     if not check_feature(feature, VARIABLES, TRANSFO_PIPELINE):
         raise ValueError(
             f"Feature '{feature}' is not in VARIABLES nor created by the PIPELINE"
         )
+
 
 # model
 TO_ONEHOT_ENCODE = ["paydex_group"]
