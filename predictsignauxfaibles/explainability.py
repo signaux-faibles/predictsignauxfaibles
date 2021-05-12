@@ -89,6 +89,7 @@ def explain(
     multi_columns.append(("model_offset", "model_offset"))
 
     ## COLUMNS NAMES REGISTRATION & MAPPING
+    ## ====================================
     # Our model's mapper uses a OneHotEncoder to generate binary variables
     # from categorical ones. It creates new columns that we must register and
     # map to our groups in order to compute the total contribution of each
@@ -113,16 +114,20 @@ def explain(
     mapper.transformed_names_[-1] = ("model_offset", "model_offset")
 
     ## COMPUTING CONTRIBUTIONS FROM OUR LOGISTIC REGRESSION
+    ## ====================================================
     (_, logreg) = model_pp.steps[1]
     coefs = np.append(logreg.coef_[0], logreg.intercept_)
 
     ## ABSOLUTE CONTRIBUTIONS are used to select the features
-    # that significantly contribute to our risk score
+    ## that significantly contribute to our risk score
+    ## ------------------------------------------------------
     feats_contr = np.multiply(coefs, mapped_data)
     micro_prod = pd.DataFrame(
         feats_contr, index=data.index, columns=mapper.transformed_names_
     )
-    micro_prod = micro_prod[multi_columns]
+    micro_prod = micro_prod[multi_columns].drop(
+        [("model_offset", "model_offset")], axis=1, inplace=False
+    )
     micro_prod.columns = pd.MultiIndex.from_tuples(
         micro_prod.columns, names=["Group", "Feature"]
     )
@@ -139,7 +144,8 @@ def explain(
     sf_data.data["expl_selection"] = micro_select.apply(lambda s: s.to_dict(), axis=1)
 
     ## OFFSET ABSOLUTE CONTRIBUTIONS are used for radar plots
-    # and to select contributive micro-variables to show in front-end
+    ## and to select contributive micro-variables to show in front-end
+    ## ---------------------------------------------------------------
     offset_feats_contr = feats_contr - logreg.intercept_ / coefs.size
     micro_radar = pd.DataFrame(
         offset_feats_contr, index=data.index, columns=mapper.transformed_names_
@@ -154,7 +160,8 @@ def explain(
     sf_data.data["macro_radar"] = macro_radar.apply(lambda x: x.to_dict(), axis=1)
 
     ## RELATIVE CONTRIBUTIONS are used to provide explanations
-    # as full-text on the front-end
+    ## as full-text on the front-end
+    ## -------------------------------------------------------
     norm_feats_contr = (
         feats_contr / np.dot(np.absolute(coefs), np.absolute(mapped_data.T))[:, None]
     )
