@@ -10,7 +10,7 @@ dotenv_path = find_dotenv()
 load_dotenv(dotenv_path)
 
 ENV = os.getenv("ENV", "develop")
-
+ROOTPATH = os.getenv("PREDICT_ROOTPATH", ".")
 # MongoDB parameters
 MONGODB_PARAMS = MongoParams(
     url=os.getenv("MONGO_URL", "mongodb://localhost"),
@@ -22,7 +22,8 @@ MONGODB_PARAMS = MongoParams(
 MIN_EFFECTIF = int(os.getenv("MIN_EFFECTIF"))
 
 # Output folder for model runs
-OUTPUT_FOLDER = "model_runs"
+OUTPUT_FOLDER = os.path.join(ROOTPATH, "model_runs")
+MODEL_FOLDER = os.path.join(ROOTPATH, "models")
 
 # Default values for data
 
