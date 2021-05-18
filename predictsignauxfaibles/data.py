@@ -142,13 +142,14 @@ class SFDataset:
             cursor.close()
 
         # create and fill missing fields with NAs
-        if not set(self.fields).issubset(set(self.data.columns)):
-            missing = set(self.fields) - set(self.data.columns)
-            logging.info(
-                f"Creating missing columns {missing} and filling them with NAs."
-            )
-            for feat in missing:
-                self.data[feat] = NAN
+        if self.fields is not None:
+            if not set(self.fields).issubset(set(self.data.columns)):
+                missing = set(self.fields) - set(self.data.columns)
+                logging.info(
+                    f"Creating missing columns {missing} and filling them with NAs."
+                )
+                for feat in missing:
+                    self.data[feat] = NAN
 
         return self
 
