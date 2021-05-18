@@ -1,8 +1,7 @@
 import os
+from typing import NamedTuple
 
 from dotenv import load_dotenv, find_dotenv
-
-from predictsignauxfaibles.utils import MongoParams
 
 # find .env automagically by walking up directories until it's found
 dotenv_path = find_dotenv()
@@ -11,7 +10,18 @@ load_dotenv(dotenv_path)
 
 ENV = os.getenv("ENV", "develop")
 ROOTPATH = os.getenv("PREDICT_ROOTPATH", ".")
+
 # MongoDB parameters
+class MongoParams(NamedTuple):
+    """
+    MongoDb parameters used in config
+    """
+
+    url: str
+    db: str
+    collection: str
+
+
 MONGODB_PARAMS = MongoParams(
     url=os.getenv("MONGO_URL", "mongodb://localhost"),
     db=os.getenv("MONGO_DB", "prod"),
