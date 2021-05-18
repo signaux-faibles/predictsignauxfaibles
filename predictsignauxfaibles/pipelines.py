@@ -120,7 +120,14 @@ REDRESSEMENTS_PIPELINE = [
     Redressement(
         "Redressement URSSAF evolution dette Juillet 2020",
         redressement_urssaf_covid,
-        input=["ratio_dette", "ratio_dette_july2020", "group_final"],
+        input=[
+            "montant_part_ouvriere_latest",
+            "montant_part_patronale_latest",
+            "montant_part_ouvriere_july2020",
+            "montant_part_patronale_july2020",
+            "cotisation_moy12m_latest",
+            "group_final",
+        ],
         output=["group_final_regle_urssaf"],
     ),
 ]
