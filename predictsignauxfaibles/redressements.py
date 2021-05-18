@@ -23,7 +23,7 @@ def redressement_urssaf_covid(data: pd.DataFrame):
     )
 
     data["delta_dette"] = (
-        data.montant_part_ouvriere_latest - data.dette_sociale_july2020
+        data.dette_sociale_latest - data.dette_sociale_july2020
     ) / data.cotisation_moy12m_latest
 
     tol = 0.2  # tolerate a change smaller than 20%
@@ -43,6 +43,6 @@ def redressement_urssaf_covid(data: pd.DataFrame):
                 return "rouge"
         return group
 
-    data["group_final_regle_urssaf"] = data.apply(rule, axis=1, tol=tol)
+    data["group_final_regle_urssaf"] = data.apply(rule, axis=1)
 
     return data
