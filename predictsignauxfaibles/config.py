@@ -10,7 +10,7 @@ dotenv_path = find_dotenv()
 load_dotenv(dotenv_path)
 
 ENV = os.getenv("ENV", "develop")
-PACKAGE_ROOTDIR = Path(__file__).parent
+PACKAGE_ROOTDIR = Path(__file__).parent.parent
 
 # MongoDB parameters
 class MongoParams(NamedTuple):
