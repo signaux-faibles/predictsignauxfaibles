@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from typing import NamedTuple
 
 from dotenv import load_dotenv, find_dotenv
@@ -9,7 +10,7 @@ dotenv_path = find_dotenv()
 load_dotenv(dotenv_path)
 
 ENV = os.getenv("ENV", "develop")
-ROOTPATH = os.getenv("PREDICT_ROOTPATH", ".")
+PACKAGE_ROOTDIR = Path(__file__).parent
 
 # MongoDB parameters
 class MongoParams(NamedTuple):
@@ -32,8 +33,8 @@ MONGODB_PARAMS = MongoParams(
 MIN_EFFECTIF = int(os.getenv("MIN_EFFECTIF"))
 
 # Output folder for model runs
-OUTPUT_FOLDER = os.path.join(ROOTPATH, "model_runs")
-MODEL_FOLDER = os.path.join(ROOTPATH, "models")
+OUTPUT_FOLDER = os.path.join(PACKAGE_ROOTDIR, "model_runs")
+MODEL_FOLDER = os.path.join(PACKAGE_ROOTDIR, "models")
 
 # Default values for data
 
