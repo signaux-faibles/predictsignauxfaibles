@@ -52,7 +52,7 @@ def make_thresholds_from_fbeta(
     while F2 alert threshold favours recall.
     """
     if thresh is None:
-        thresh = np.arange(0, 1, n_thr)
+        thresh = np.linspace(0, 1, n_thr)
 
     f_beta_F1 = []
     f_beta_F2 = []
@@ -106,9 +106,11 @@ def make_thresholds_from_conditions(
     """
     t_F1_id = np.argmax(precision >= min_precision_F1)
     t_F1 = thresh[t_F1_id]
+    print(f"F1 - Precision>={min_precision_F1} - Optimal threshold: {t_F1}")
 
     t_F2_id = np.argmax(recall[::-1][:-1] >= min_recall_F2)
     t_F2 = thresh[::-1][t_F2_id]
+    print(f"F2 - Recall>={min_recall_F2} - Optimal threshold: {t_F2}")
 
     return (t_F1, t_F2)
 
