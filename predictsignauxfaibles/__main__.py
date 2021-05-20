@@ -8,14 +8,13 @@ import sys
 from types import ModuleType
 
 import pandas as pd
-from sklearn.metrics import fbeta_score, balanced_accuracy_score
-from sklearn.pipeline import Pipeline
 
 from predictsignauxfaibles.config import OUTPUT_FOLDER, IGNORE_NA
-from predictsignauxfaibles.pipelines import run_pipeline
-from predictsignauxfaibles.utils import set_if_not_none, load_conf
 from predictsignauxfaibles.data import SFDataset
 from predictsignauxfaibles.explainability import explain
+from predictsignauxfaibles.evaluate import evaluate
+from predictsignauxfaibles.pipelines import run_pipeline
+from predictsignauxfaibles.utils import set_if_not_none, load_conf
 
 sys.path.append("../")
 
@@ -88,22 +87,6 @@ def make_stats(train: SFDataset, test: SFDataset, predict: SFDataset):
         stats[arg] = getattr(datasets[dest[0]], dest[1])
 
     return stats
-
-
-def evaluate(
-    model: Pipeline, dataset: SFDataset, beta: float
-):  # To be turned into a SFModel method when refactoring models
-    """
-    Returns evaluation metrics of model evaluated on df
-    Args:
-        model: a sklearn-like model with a predict method
-        df: dataset
-    """
-    balanced_accuracy = balanced_accuracy_score(
-        dataset.data["outcome"], model.predict(dataset.data)
-    )
-    fbeta = fbeta_score(dataset.data["outcome"], model.predict(dataset.data), beta=beta)
-    return {"balanced_accuracy": balanced_accuracy, "fbeta": fbeta}
 
 
 def run(
