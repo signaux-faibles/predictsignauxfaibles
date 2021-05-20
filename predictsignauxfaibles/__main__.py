@@ -158,8 +158,10 @@ def run(
     logging.info(f"{step} - Predicting on {len(predict)} observations.")
     predictions = fit.predict_proba(predict.data)
     predict.data["predicted_probability"] = predictions[:, 1]
-    logging.info(f"{step} - Computing score explanations")
-    predict = explain(predict, conf)
+
+    if args.explain:
+        logging.info(f"{step} - Computing score explanations")
+        predict = explain(predict, conf)
 
     logging.info(f"{step} - Exporting prediction data to csv")
 
@@ -167,9 +169,21 @@ def run(
     run_path.mkdir(parents=True, exist_ok=True)
 
     export_destination = "predictions.csv"
-    predict.data[["siren", "siret", "predicted_probability"]].to_csv(
-        run_path / export_destination, index=False
-    )
+
+    export_columns = [
+        "siren",
+        "siret",
+        "predicted_probability",
+    ]
+    if args.explain:
+        export_columns += [
+            "expl_selection",
+            "macro_expl",
+            "micro_expl",
+            "macro_radar",
+        ]
+
+    predict.data[export_columns].to_csv(run_path / export_destination, index=False)
 
     with open(run_path / "stats.json", "w") as stats_file:
         stats_file.write(json.dumps(model_stats))
@@ -262,6 +276,13 @@ def make_parser():
         help="""
         Predict on all companies for the month specified.
         To predict on April 2021, provide any date such as '2021-04-01'
+        """,
+    )
+    predict_args.add_argument(
+        "--explain",
+        action="store_true",
+        help="""
+        If provided, the contribution of features to model predictions will be computed and added to the output
         """,
     )
 
