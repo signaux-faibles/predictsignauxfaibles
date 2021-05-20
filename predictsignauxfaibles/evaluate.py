@@ -1,4 +1,4 @@
-#pylint: disable=invalid-name,too-many-arguments,too-many-function-args
+# pylint: disable=invalid-name,too-many-arguments,too-many-function-args
 
 import numpy as np
 from sklearn.base import BaseEstimator
@@ -43,7 +43,7 @@ def make_thresholds_from_fbeta(
     beta_F1: float = 0.5,
     beta_F2: float = 2,
     n_thr: int = 1000,
-    thresh: np.array = None
+    thresh: np.array = None,
 ):
     """
     Finds the classification thresholds that maximise f_beta score.
@@ -95,7 +95,7 @@ def make_thresholds_from_conditions(
     recall: np.array,
     thresh: np.array,
     min_precision_F1: float = 0.93,
-    min_recall_F2: float = 0.63
+    min_recall_F2: float = 0.63,
 ):
     """
     Finds the classification thresholds that maximise performance
