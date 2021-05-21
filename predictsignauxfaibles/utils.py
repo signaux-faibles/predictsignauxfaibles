@@ -6,15 +6,7 @@ from typing import NamedTuple, List
 from pathlib import Path
 import pytz
 
-
-class MongoParams(NamedTuple):
-    """
-    MongoDb parameters used in config
-    """
-
-    url: str
-    db: str
-    collection: str
+from predictsignauxfaibles.config import MODEL_FOLDER
 
 
 class MongoDBQuery:
@@ -188,7 +180,7 @@ def load_conf(model_name: str = "default"):
     Args:
         model_name: str
     """
-    conf_filepath = Path("./models") / model_name / "model_conf.py"
+    conf_filepath = Path(MODEL_FOLDER) / model_name / "model_conf.py"
     if not conf_filepath.exists():
         raise ValueError(f"{conf_filepath} does not exist")
 
