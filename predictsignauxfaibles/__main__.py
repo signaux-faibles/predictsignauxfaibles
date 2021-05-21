@@ -7,10 +7,13 @@ import sys
 from types import ModuleType
 
 from sklearn.metrics import fbeta_score, balanced_accuracy_score
+from sklearn.pipeline import Pipeline
+
 from predictsignauxfaibles.config import OUTPUT_FOLDER, IGNORE_NA
 from predictsignauxfaibles.pipelines import run_pipeline
 from predictsignauxfaibles.utils import set_if_not_none, load_conf
 from predictsignauxfaibles.data import SFDataset
+from predictsignauxfaibles.explainability import explain
 
 sys.path.append("../")
 
@@ -81,7 +84,7 @@ def make_stats(train: SFDataset, test: SFDataset, predict: SFDataset):
 
 
 def evaluate(
-    model, dataset, beta
+    model: Pipeline, dataset: SFDataset, beta: float
 ):  # To be turned into a SFModel method when refactoring models
     """
     Returns evaluation metrics of model evaluated on df
@@ -165,6 +168,8 @@ def run(
     logging.info(f"{step} - Predicting on {len(predict)} observations.")
     predictions = fit.predict_proba(predict.data)
     predict.data["predicted_probability"] = predictions[:, 1]
+    logging.info(f"{step} - Computing score explanations")
+    predict = explain(predict, conf)
 
     logging.info(f"{step} - Exporting prediction data to csv")
 
@@ -172,9 +177,17 @@ def run(
     run_path.mkdir(parents=True, exist_ok=True)
 
     export_destination = f"predictions-{model_id}.csv"
-    predict.data[["siren", "siret", "predicted_probability"]].to_csv(
-        run_path / export_destination, index=False
-    )
+    predict.data[
+        [
+            "siren",
+            "siret",
+            "predicted_probability",
+            "expl_selection",
+            "macro_expl",
+            "micro_expl",
+            "macro_radar",
+        ]
+    ].to_csv(run_path / export_destination, index=False)
 
     with open(run_path / f"stats-{model_id}.json", "w") as stats_file:
         stats_file.write(json.dumps(model_stats))

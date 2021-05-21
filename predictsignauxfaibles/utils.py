@@ -1,8 +1,9 @@
 from datetime import datetime
-from typing import NamedTuple, List
-from pathlib import Path
 import importlib.util
 import logging
+import math
+from typing import NamedTuple, List
+from pathlib import Path
 import pytz
 
 from predictsignauxfaibles.config import MODEL_FOLDER
@@ -166,6 +167,11 @@ def set_if_not_none(obj, attr, val):
     """
     if val is not None:
         setattr(obj, attr, val)
+
+
+def sigmoid(flt: float):
+    """Returns the sigmoid of flt"""
+    return 1 / (1 + math.exp(-flt))
 
 
 def load_conf(model_name: str = "default"):
