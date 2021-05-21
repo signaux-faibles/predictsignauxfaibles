@@ -4,16 +4,25 @@ from typing import NamedTuple
 
 from dotenv import load_dotenv, find_dotenv
 
+
+# SETTING ENV VARIABLES
+# ======================
 # find .env automagically by walking up directories until it's found
 dotenv_path = find_dotenv()
 # load up the entries as environment variables
 load_dotenv(dotenv_path)
 
 ENV = os.getenv("ENV", "develop")
+MIN_EFFECTIF = int(os.getenv("MIN_EFFECTIF"))
 PACKAGE_ROOTDIR = Path(__file__).parent.parent
+OUTPUT_FOLDER = os.path.join(PACKAGE_ROOTDIR, "model_runs")
+MODEL_FOLDER = os.path.join(PACKAGE_ROOTDIR, "models")
+
+# SETTING DEFAULT MONGODB PARAMS
+# ==============================
 
 # MongoDB parameters
-class MongoParams(NamedTuple):
+class MongoParams(NamedTuple):  # pylint: disable=too-few-public-methods
     """
     MongoDb parameters used in config
     """
@@ -29,13 +38,8 @@ MONGODB_PARAMS = MongoParams(
     collection=os.getenv("MONGO_COLLECTION", "Features"),
 )
 
-# Other parameters (maybe group them into coherent groups one day...)
-MIN_EFFECTIF = int(os.getenv("MIN_EFFECTIF"))
-
-# Output folder for model runs
-OUTPUT_FOLDER = os.path.join(PACKAGE_ROOTDIR, "model_runs")
-MODEL_FOLDER = os.path.join(PACKAGE_ROOTDIR, "models")
-
+# SETTING PACKAGE-WIDE DEFAULT VALUES
+# ===================================
 # Default values for data
 
 DEFAULT_DATA_VALUES = {
