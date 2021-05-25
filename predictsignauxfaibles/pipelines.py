@@ -11,6 +11,11 @@ from predictsignauxfaibles.preprocessors import (
     acoss_make_avg_delta_dette_par_effectif,
 )
 
+from predictsignauxfaibles.redressements import (
+    Redressement,
+    redressement_urssaf_covid,
+)
+
 
 class MissingDataError(Exception):
     """
@@ -20,29 +25,30 @@ class MissingDataError(Exception):
 
 def run_pipeline(data: pd.DataFrame, pipeline: List[namedtuple]):
     """
-    Run a pipeline of Preprocessor objects on a dataframe
+    Run a pipeline of Preprocessor or Redressement objects (aka "steps") on a dataframe
     Args:
-        pipeline: a list of Preprocessor objects (see predictsignauxfaibles.preprocessors)
+        pipeline: a list of Preprocessor or Redressement objects
+          (see predictsignauxfaibles.preprocessors or predictsignauxfaibles.redressements)
     """
     logging.info("Checking that input columns are all there.")
-    for preprocessor in pipeline:
-        if not set(preprocessor.input).issubset(data.columns):
-            missing_cols = set(preprocessor.input) - set(data.columns)
+    for step in pipeline:
+        if not set(step.input).issubset(data.columns):
+            missing_cols = set(step.input) - set(data.columns)
             error_message = (
-                f"Missing variables {missing_cols} in order to run {preprocessor.name}."
+                f"Missing variables {missing_cols} in order to run {step.name}."
             )
             raise MissingDataError(error_message)
 
     logging.info("Running pipeline on data.")
     data = data.copy()
-    for i, preprocessor in enumerate(pipeline):
-        logging.info(f"STEP {i+1}: {preprocessor.name}")
-        data = preprocessor.function(data)
-        if preprocessor.output is None:
+    for i, step in enumerate(pipeline):
+        logging.info(f"STEP {i+1}: {step.name}")
+        data = step.function(data)
+        if step.output is None:
             continue
-        if not set(preprocessor.output).issubset(data.columns):
-            missing_output_cols = set(preprocessor.output) - set(data.columns)
-            warning_message = f"STEP {i+1}: function {preprocessor.function.__name__} \
+        if not set(step.output).issubset(data.columns):
+            missing_output_cols = set(step.output) - set(data.columns)
+            warning_message = f"STEP {i+1}: function {step.function.__name__} \
 did not produce expected output {missing_output_cols}"
             logging.warning(warning_message)
             continue
@@ -51,6 +57,8 @@ did not produce expected output {missing_output_cols}"
 
 
 # Pipelines
+
+# Preprocessors
 
 DEFAULT_PIPELINE = [
     Preprocessor(
@@ -106,5 +114,23 @@ SMALL_PIPELINE = [
     ),
 ]
 
+# Redressements
+
+REDRESSEMENTS_PIPELINE = [
+    Redressement(
+        "Redressement URSSAF evolution dette Juillet 2020",
+        redressement_urssaf_covid,
+        input=[
+            "montant_part_ouvriere_latest",
+            "montant_part_patronale_latest",
+            "montant_part_ouvriere_july2020",
+            "montant_part_patronale_july2020",
+            "cotisation_moy12m_latest",
+            "group_final",
+        ],
+        output=["group_final_regle_urssaf"],
+    ),
+]
+
 # This is useful for automatic testing
-ALL_PIPELINES = [DEFAULT_PIPELINE, SMALL_PIPELINE]
+ALL_PIPELINES = [DEFAULT_PIPELINE, SMALL_PIPELINE, REDRESSEMENTS_PIPELINE]

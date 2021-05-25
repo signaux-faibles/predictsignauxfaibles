@@ -26,3 +26,14 @@ df_test_code_naf = pd.DataFrame(
 )
 
 df_test_full = pd.concat((df_test_code_naf, df_test_acoss, df_test_paydex), axis=1)
+
+df_test_redressement_urssaf = pd.DataFrame(
+    {
+        "montant_part_ouvriere_latest": [50, 60, 100],
+        "montant_part_patronale_latest": [75, 50, 100],
+        "montant_part_ouvriere_july2020": [50, 50, 50],
+        "montant_part_patronale_july2020": [50, 50, 0],
+        "cotisation_moy12m_latest": [100, 100, 75],
+        "group_final": ["vert", "vert", "rouge"],
+    }
+)
