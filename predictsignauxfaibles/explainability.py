@@ -8,20 +8,6 @@ from predictsignauxfaibles.data import SFDataset
 from predictsignauxfaibles.utils import sigmoid
 
 
-def contribution_to_score(entry: pd.Series):
-    """
-    Computed the (virtual) contribution to the (post-logistic) score of a group of features.
-    This score, between 0 and 1, is only used for interfacing group contributions with radar plots.
-    This score is not interpretable quantitatively.
-    To obtain the relative contribution of each group of feature in an exact way,
-    please use field macro_expl
-    """
-    group_contrs = entry.groupby(by="Group").sum()
-    return group_contrs[group_contrs.index != "model_offset"].apply(
-        lambda x: 1 - sigmoid(x)
-    )
-
-
 def list_concerning_contributions(entry: pd.Series, thr=0.07):
     """
     From a record containing dot-products of each feature with the weight vector,
@@ -40,6 +26,26 @@ def list_reassuring_contributions(entry: pd.Series, thr=0.07):
     masked = entry.where(entry <= -4 * thr) * entry
     masked.sort_values(ascending=True, inplace=True)
     return masked[~masked.isnull()].index.tolist()
+
+
+def group_retards_paiement(
+    micro_df: pd.DataFrame, macro_df: pd.DataFrame, conf: ModuleType
+):
+    """
+    Replaces micro contributions for group "retards_paiement"
+    with aggregated contribution
+    """
+    micro_df[[("retards_paiement", "retards_paiement")]] = macro_df[
+        ["retards_paiement"]
+    ]
+    micro_df.drop(
+        columns=[
+            ("retards_paiement", FEAT)
+            for FEAT in conf.FEATURE_GROUPS["retards_paiement"]
+        ],
+        inplace=True,
+    )
+    return micro_df
 
 
 def explain(
@@ -151,13 +157,17 @@ def explain(
     micro_prod.columns = pd.MultiIndex.from_tuples(
         micro_prod.columns, names=["Group", "Feature"]
     )
+
+    macro_prod = micro_prod.groupby(by="Group", axis=1).sum()
+
+    micro_prod = group_retards_paiement(micro_prod, macro_prod, conf)
+
     micro_select_concerning = micro_prod.apply(
         lambda s: list_concerning_contributions(s, thr=thresh_micro), axis=1
     )
     micro_select_reassuring = micro_prod.apply(
         lambda s: list_reassuring_contributions(s, thr=thresh_micro), axis=1
     )
-
     micro_select = micro_select_concerning.to_frame(name="select_concerning").join(
         micro_select_reassuring.to_frame(name="select_reassuring")
     )
@@ -176,7 +186,9 @@ def explain(
     )
     ## Aggregating contributions at the group level
     # and applying sigmoid provides the radar score for each group
-    macro_radar = micro_radar.apply(contribution_to_score, axis=1)
+    macro_radar = micro_radar.groupby(by="Group", axis=1).sum().apply(sigmoid)
+    macro_radar.drop(columns=["model_offset"], inplace=True)
+
     sf_data.data["macro_radar"] = macro_radar.apply(lambda x: x.to_dict(), axis=1)
 
     ## RELATIVE CONTRIBUTIONS are used to provide explanations
@@ -193,7 +205,8 @@ def explain(
     micro_expl.columns = pd.MultiIndex.from_tuples(
         micro_expl.columns, names=["Group", "Feature"]
     )
-    macro_expl = micro_expl.apply(lambda x: x.groupby(by="Group").sum(), axis=1)
+    macro_expl = micro_expl.groupby(by="Group", axis=1).sum()
+    micro_expl = group_retards_paiement(micro_expl, macro_expl, conf)
 
     # Aggregating contributions at the group level
     sf_data.data["macro_expl"] = macro_expl.apply(lambda x: x.to_dict(), axis=1)
