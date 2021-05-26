@@ -151,6 +151,12 @@ class SFDataset:
                 for feat in missing:
                     self.data[feat] = NAN
 
+        # force SIREN and SIRET to be strings
+        if "siren" in self.data.columns:
+            self.data.siren = self.data.siren.astype(str)
+        if "siret" in self.data.columns:
+            self.data.siret = self.data.siret.astype(str)
+
         return self
 
     def raise_if_empty(self):
