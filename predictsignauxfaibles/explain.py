@@ -2,10 +2,13 @@ from types import ModuleType
 
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import OneHotEncoder
 
 from predictsignauxfaibles.data import SFDataset
-from predictsignauxfaibles.utils import sigmoid
+from predictsignauxfaibles.utils import (
+    sigmoid,
+    map_cat_feature_to_categories,
+    make_multi_columns,
+)
 
 
 def list_concerning_contributions(entry: pd.Series, thr=0.07):
@@ -41,8 +44,7 @@ def group_retards_paiement(
     ]
     remapped_df.drop(
         columns=[
-            ("retards_paiement", FEAT)
-            for FEAT in feat_groups["retards_paiement"]
+            ("retards_paiement", FEAT) for FEAT in feat_groups["retards_paiement"]
         ],
         inplace=True,
     )
@@ -66,53 +68,30 @@ def explain(
         conf: ModuleType
             The model configuration file used for predictions
     """
+
+    # Creating a multi-indexed-columns version of our dataset
+    # where features are listed in the same order as in conf.FEATURE_GROUPS
     multi_columns = [
         (group, feat)
         for (group, feats) in conf.FEATURE_GROUPS.items()
         for feat in feats
     ]
-    # Creating a flat version of our group-feature hierarchy
-    flat_data = pd.DataFrame(sf_data.data[[feat for (group, feat) in multi_columns]])
-
-    # Creating a multi-indexed-columns version of our dataset
-    # where features are listed in the same order as in conf.FEATURE_GROUPS
     data = pd.DataFrame(sf_data.data[[feat for (group, feat) in multi_columns]])
     data.columns = pd.MultiIndex.from_tuples(multi_columns, names=["Group", "Feature"])
 
     # Mapping categorical vairables to their oh-encoded level variables
-    cat_mapping = {}
-    for (group, feats) in conf.FEATURE_GROUPS.items():
-        for feat in feats:
-            if feat not in conf.TO_ONEHOT_ENCODE:
-                continue
-            feat_oh = OneHotEncoder()
-            feat_oh.fit(
-                flat_data[
-                    [
-                        feat,
-                    ]
-                ]
-            )
-            cat_names = feat_oh.get_feature_names().tolist()
-            cat_mapping[(group, feat)] = [feat + "_" + name for name in cat_names]
+    cat_mapping = map_cat_feature_to_categories(data, conf)
 
-    # The reverse mapping with help us as well
+    # The reverse mapping will help us as well
     cat_to_group = {
         cat_feat: key[0]
         for (key, cat_feats) in cat_mapping.items()
         for cat_feat in cat_feats
     }
 
-    # Finally, let's create a list of tuples that we'll use
-    # to multi-index our columns...
-    multi_columns = []
-    for (group, feats) in conf.FEATURE_GROUPS.items():
-        for feat in feats:
-            if (group, feat) in cat_mapping.keys():
-                for cat_feat in cat_mapping[(group, feat)]:
-                    multi_columns.append((group, cat_feat))
-            else:
-                multi_columns.append((group, feat))
+    # Create a list of tuples that we'll use to multi-index our columns
+    # including categorical features
+    multi_columns = make_multi_columns(data, conf)
     multi_columns.append(("model_offset", "model_offset"))
 
     ## COLUMNS NAMES REGISTRATION & MAPPING
@@ -124,6 +103,8 @@ def explain(
     model_pp = conf.MODEL_PIPELINE
 
     (_, mapper) = model_pp.steps[0]
+    flat_data = data.copy()
+    flat_data.columns = [feat for (group, feat) in data.columns]
     mapped_data = mapper.transform(flat_data)
     mapped_data = np.hstack((mapped_data, np.ones((len(sf_data), 1))))
 
