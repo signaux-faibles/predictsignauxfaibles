@@ -22,6 +22,26 @@ def contribution_to_score(entry: pd.Series):
     )
 
 
+def list_concerning_contributions(entry: pd.Series, thr=0.07):
+    """
+    From a record containing dot-products of each feature with the weight vector,
+    computes a list of features that contribute to a high risk of failure
+    """
+    masked = entry.where(entry >= 4 * thr) * entry
+    masked.sort_values(ascending=False, inplace=True)
+    return masked[~masked.isnull()].index.tolist()
+
+
+def list_reassuring_contributions(entry: pd.Series, thr=0.07):
+    """
+    From a record containing dot-products of each feature with the weight vector,
+    computes a list of features that contribute to a low risk of failure
+    """
+    masked = entry.where(entry <= -4 * thr) * entry
+    masked.sort_values(ascending=True, inplace=True)
+    return masked[~masked.isnull()].index.tolist()
+
+
 def explain(
     sf_data: SFDataset, conf: ModuleType, thresh_micro: float = 0.07
 ):  # pylint: disable=too-many-statements, too-many-locals
@@ -131,11 +151,11 @@ def explain(
     micro_prod.columns = pd.MultiIndex.from_tuples(
         micro_prod.columns, names=["Group", "Feature"]
     )
-    micro_select_concerning = micro_prod.mask(micro_prod >= 4 * thresh_micro).apply(
-        lambda s: s[s.isnull()].index.tolist(), axis=1
+    micro_select_concerning = micro_prod.apply(
+        lambda s: list_concerning_contributions(s, thr=thresh_micro), axis=1
     )
-    micro_select_reassuring = micro_prod.mask(micro_prod <= -4 * thresh_micro).apply(
-        lambda s: s[s.isnull()].index.tolist(), axis=1
+    micro_select_reassuring = micro_prod.apply(
+        lambda s: list_reassuring_contributions(s, thr=thresh_micro), axis=1
     )
 
     micro_select = micro_select_concerning.to_frame(name="select_concerning").join(
