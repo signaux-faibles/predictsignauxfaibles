@@ -81,7 +81,6 @@ pickleshare==0.7.5
 Pillow==8.1.0
 pip-autoremove==0.9.1
 pluggy==0.13.1
--e git+git@github.com:signaux-faibles/predictsignauxfaibles.git@ec65af908690dc911ef6c567bc46a755e120488c#egg=predictsignauxfaibles
 progressbar2==3.53.1
 prometheus-client==0.9.0
 prompt-toolkit==3.0.14
