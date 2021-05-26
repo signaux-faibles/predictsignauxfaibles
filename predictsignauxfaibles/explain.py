@@ -13,7 +13,7 @@ def list_concerning_contributions(entry: pd.Series, thr=0.07):
     From a record containing dot-products of each feature with the weight vector,
     computes a list of features that contribute to a high risk of failure
     """
-    masked = entry.where(entry >= 4 * thr) * entry
+    masked = entry.where(entry >= 4 * thr)
     masked.sort_values(ascending=False, inplace=True)
     return masked[~masked.isnull()].index.tolist()
 
@@ -23,29 +23,30 @@ def list_reassuring_contributions(entry: pd.Series, thr=0.07):
     From a record containing dot-products of each feature with the weight vector,
     computes a list of features that contribute to a low risk of failure
     """
-    masked = entry.where(entry <= -4 * thr) * entry
+    masked = entry.where(entry <= -4 * thr)
     masked.sort_values(ascending=True, inplace=True)
     return masked[~masked.isnull()].index.tolist()
 
 
 def group_retards_paiement(
-    micro_df: pd.DataFrame, macro_df: pd.DataFrame, conf: ModuleType
+    micro_df: pd.DataFrame, macro_df: pd.DataFrame, feat_groups: dict
 ):
     """
     Replaces micro contributions for group "retards_paiement"
     with aggregated contribution
     """
-    micro_df[[("retards_paiement", "retards_paiement")]] = macro_df[
+    remapped_df = micro_df.copy()
+    remapped_df[[("retards_paiement", "retards_paiement")]] = macro_df[
         ["retards_paiement"]
     ]
-    micro_df.drop(
+    remapped_df.drop(
         columns=[
             ("retards_paiement", FEAT)
-            for FEAT in conf.FEATURE_GROUPS["retards_paiement"]
+            for FEAT in feat_groups["retards_paiement"]
         ],
         inplace=True,
     )
-    return micro_df
+    return remapped_df
 
 
 def explain(
@@ -160,7 +161,7 @@ def explain(
 
     macro_prod = micro_prod.groupby(by="Group", axis=1).sum()
 
-    micro_prod = group_retards_paiement(micro_prod, macro_prod, conf)
+    micro_prod = group_retards_paiement(micro_prod, macro_prod, conf.FEATURE_GROUPS)
 
     micro_select_concerning = micro_prod.apply(
         lambda s: list_concerning_contributions(s, thr=thresh_micro), axis=1
@@ -206,7 +207,7 @@ def explain(
         micro_expl.columns, names=["Group", "Feature"]
     )
     macro_expl = micro_expl.groupby(by="Group", axis=1).sum()
-    micro_expl = group_retards_paiement(micro_expl, macro_expl, conf)
+    micro_expl = group_retards_paiement(micro_expl, macro_expl, conf.FEATURE_GROUPS)
 
     # Aggregating contributions at the group level
     sf_data.data["macro_expl"] = macro_expl.apply(lambda x: x.to_dict(), axis=1)

@@ -37,3 +37,13 @@ df_test_redressement_urssaf = pd.DataFrame(
         "group_final": ["vert", "vert", "rouge"],
     }
 )
+
+## df for testing explain functions
+df_test_explain_prod = pd.DataFrame(
+    {
+        "equilibre_financier": [-0.05, 0.01, 0.05],
+        "paydex_yoy": [1, 1, -0.5],
+        "paydex_other_feat": [0.1, 0, -0.05],
+        "ratio_dette": [0, 10, -5],
+    }
+)
