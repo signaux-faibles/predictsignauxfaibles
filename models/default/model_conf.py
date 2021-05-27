@@ -107,6 +107,10 @@ for feature in FEATURES:
 
 # model
 TO_ONEHOT_ENCODE = ["paydex_group"]
+# /!\ Onehot variables must be listed in the same order as in features, for explain function
+TO_ONEHOT_ENCODE = [
+    to_oh_enc for to_oh_enc in FEATURES if to_oh_enc in TO_ONEHOT_ENCODE
+]
 TO_SCALE = list(set(FEATURES) - set(TO_ONEHOT_ENCODE))
 
 mapper = DataFrameMapper(
