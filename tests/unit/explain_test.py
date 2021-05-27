@@ -58,10 +58,9 @@ def test_group_retards_paiement():
     df_micro.columns = pd.MultiIndex.from_tuples(
         multi_columns, names=["Group", "Feature"]
     )
-    feat_groups = {"retards_paiement": ["paydex_yoy", "paydex_other_feat"]}
 
     df_macro = df_micro.groupby(by="Group", axis=1).sum()
-    df_remapped = group_retards_paiement(df_micro, df_macro, feat_groups)
+    df_remapped = group_retards_paiement(df_micro, df_macro, multi_columns)
 
     assert ("retards_paiement", "retards_paiement") in df_remapped.columns
     assert ("retards_paiement", "paydex_yoy") not in df_remapped.columns

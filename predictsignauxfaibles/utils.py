@@ -244,8 +244,17 @@ def log_splits_size(preds: pd.DataFrame, t_rouge: float, t_orange: float):
 def map_cat_feature_to_categories(data: pd.DataFrame, conf: ModuleType):
     """
     Maps categorical features to variables built from their levels,
+    **in the order they are found in conf.FEATURE_GROUPS**
     using a OneHotEncoder fitted to each categorical variable
     """
+    group_feats_tuples = [
+        (group, feat)
+        for (group, feats) in conf.FEATURE_GROUPS.items()
+        for feat in feats
+    ]
+    data = data[conf.FEATURES]
+    data.columns = group_feats_tuples
+
     cat_mapping = {}
     for (group, feats) in conf.FEATURE_GROUPS.items():
         for feat in feats:
@@ -277,11 +286,18 @@ def make_multi_columns(data: pd.DataFrame, conf: ModuleType):
     cat_mapping = map_cat_feature_to_categories(data, conf)
 
     # Create a list of tuples than can be turned into a MultiIndex
-    multi_columns = []
+    multi_columns_cat = []
     for (group, feats) in conf.FEATURE_GROUPS.items():
         for feat in feats:
             if (group, feat) in cat_mapping.keys():
                 for cat_feat in cat_mapping[(group, feat)]:
-                    multi_columns.append((group, cat_feat))
+                    multi_columns_cat.append((group, cat_feat))
 
-    return multi_columns
+    multi_columns_nocat = [
+        (group, feat)
+        for (group, feats) in conf.FEATURE_GROUPS.items()
+        for feat in feats
+        if (group, feat) not in cat_mapping.keys()
+    ]
+
+    return multi_columns_cat + multi_columns_nocat
