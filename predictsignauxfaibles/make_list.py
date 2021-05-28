@@ -61,19 +61,14 @@ def assign_flag(pred: float, t_rouge: float, t_orange: float):
     return "Pas d'alerte"
 
 
-def make_alert(preds: pd.DataFrame, t_rouge: float, t_orange: float):
+def log_splits_size(preds: pd.DataFrame, t_rouge: float, t_orange: float):
     """
     Generates red/orange/green flags based on two thresholds
     """
     assert "predicted_probability" in preds.columns.tolist()
-    preds["alert"] = preds["predicted_probability"].apply(
-        lambda x: assign_flag(x, t_rouge, t_orange)
-    )
 
     num_rouge = sum(preds["predicted_probability"] > t_rouge)
     num_orange = sum(preds["predicted_probability"] > t_orange)
     num_orange -= num_rouge
-    print(f"{num_rouge} rouge ({round(num_rouge/preds.shape[0] * 100, 2)}%)")
-    print(f"{num_orange} orange ({round(num_orange/preds.shape[0] * 100, 2)}%)")
-
-    return preds
+    logging.info(f"{num_rouge} rouge ({round(num_rouge/preds.shape[0] * 100, 2)}%)")
+    logging.info(f"{num_orange} orange ({round(num_orange/preds.shape[0] * 100, 2)}%)")
