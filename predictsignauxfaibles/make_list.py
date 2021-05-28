@@ -1,5 +1,6 @@
-# pylint: disable=all
+import logging
 from types import ModuleType
+from typing import List
 
 import numpy as np
 import pandas as pd
@@ -13,7 +14,8 @@ from predictsignauxfaibles.data import SFDataset
 from predictsignauxfaibles.pipelines import run_pipeline
 
 
-def merge_models(model_list: list):
+def merge_models(model_list: List[pd.DataFrame]):
+    # pylint: disable=all
     """
     Builds a single list of predicted probabilities based on several models,
     listed by decreasing order of priority.
@@ -23,9 +25,15 @@ def merge_models(model_list: list):
         model_list: list
             A list of pandas DataFrame containing, at least, the following columns: siren, predicted_probability
     """
-    merged = model_list.pop()
-    for model_id in range(len(model_list)):
-        model = model_list.pop()
+    try:
+        merged = model_list.pop()
+    except IndexError:
+        logging.error("model_list appears to be empty")
+    if model_list == []:
+        logging.warning("model_list contains a single model")
+        return merged
+
+    for model in model_list:
         merged = pd.merge(
             model,
             merged,
