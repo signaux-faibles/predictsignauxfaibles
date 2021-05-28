@@ -50,6 +50,10 @@ def merge_models(model_list: List[pd.DataFrame]):
 
 
 def assign_flag(pred: float, t_rouge: float, t_orange: float):
+    assert t_rouge >= 0 and t_rouge <= 1, "t_rouge must be a number between 0 and 1"
+    assert t_orange >= 0 and t_orange <= 1, "t_orange must be a number between 0 and 1"
+    assert t_rouge >= t_orange, "t_rouge should be greater than t_orange"
+
     if pred > t_rouge:
         return "Alerte seuil F1"
     elif pred > t_orange:
