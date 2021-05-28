@@ -143,6 +143,14 @@ class MongoDBQuery:
         return pytz.utc.localize(datetime.strptime(date, "%Y-%m-%d"))
 
 
+class CLIError(Exception):
+    "Base class for errors linked to reading CLI options"
+
+
+class EmptyFileError(CLIError):
+    "Raised when reading an empty file that should be non-empty"
+
+
 def check_feature(feature_name: str, variables: list, pipeline: List[NamedTuple]):
     """
     Check that a feature is either explicitly requested from the database as a variable

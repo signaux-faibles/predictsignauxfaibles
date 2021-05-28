@@ -14,7 +14,11 @@ from predictsignauxfaibles.data import SFDataset
 from predictsignauxfaibles.explainability import explain
 from predictsignauxfaibles.evaluate import evaluate
 from predictsignauxfaibles.pipelines import run_pipeline
-from predictsignauxfaibles.utils import set_if_not_none, load_conf
+from predictsignauxfaibles.utils import (
+    set_if_not_none,
+    load_conf,
+    EmptyFileError,
+)
 
 sys.path.append("../")
 
@@ -33,7 +37,6 @@ ARGS_TO_ATTRS = {
     "test_from": ("test", "date_min"),
     "test_to": ("test", "date_max"),
     "predict_on": ("predict", "date_min"),
-    "predict_siret_list": ("predict", "sirets"),
 }
 
 
@@ -56,16 +59,31 @@ def get_train_test_predict_datasets(args_ns: argparse.Namespace, conf: ModuleTyp
         "predict": conf.PREDICT_DATASET,
     }
 
-    if args_ns.predict_siret_list is not None:
-        predict_siret_list = pd.read_csv(args_ns.predict_siret_list).siret.tolist()
-        set_if_not_none(datasets["predict"], "siret", predict_siret_list)
-
     args_dict = vars(args_ns)
     for (arg, dest) in ARGS_TO_ATTRS.items():
         set_if_not_none(datasets[dest[0]], dest[1], args_dict[arg])
 
     if args_ns.predict_on is not None:
         datasets["predict"].date_max = args_ns.predict_on[:-2] + "28"
+
+    if args_ns.predict_siretlist_path is not None:
+        predict_siret_list = (
+            pd.read_csv(
+                args_ns.predict_siretlist_path,
+                names=["siret"],
+                header=0,
+                index_col=False,
+            )
+            .siret.astype(str)
+            .tolist()
+        )
+
+        if predict_siret_list == []:
+            raise EmptyFileError(
+                f"File {args_ns.predict_siretlist_path} appears to be empty"
+            )
+
+        set_if_not_none(datasets["predict"], "sirets", predict_siret_list)
 
     return datasets["train"], datasets["test"], datasets["predict"]
 
@@ -267,8 +285,14 @@ def make_parser():
     predict_args.add_argument(
         "--predict_siret_list",
         type=str,
-        dest="predict_siret_list",
-        help="If provided a csv list of SIRETs, will predict on these specific SIRET",
+        dest="predict_siretlist_path",
+        help="""
+        If provided, containg the path to a file containing a list of SIRETs that themodel will predict on.
+        The input file must contain one SIRET per line, and must not include a header.
+        If more than one column is present in the file, SIRETs should be in the first column,
+        and columns should be comma-separated. Subsequent columns will be ignored.
+        In particular, no index different from SIRETs should be included as first column.  
+        """,
     )
     predict_args.add_argument(
         "--predict_on",
