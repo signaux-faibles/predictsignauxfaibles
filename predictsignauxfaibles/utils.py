@@ -2,8 +2,10 @@ from datetime import datetime
 import importlib.util
 import logging
 import math
-from typing import NamedTuple, List
 from pathlib import Path
+from typing import List, NamedTuple
+
+import pandas as pd
 import pytz
 
 from predictsignauxfaibles.config import MODEL_FOLDER
@@ -198,3 +200,40 @@ def load_conf(model_name: str = "default"):
     model_conf = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(model_conf)  # pylint: disable=wrong-import-position
     return model_conf
+
+
+def assign_flag(pred: float, t_rouge: float, t_orange: float):
+    """
+    Turns a prediction score pred into an alert level
+    Arguments:
+    - pred: float
+        a predicted risk score between 0 and 1
+    - t_rouge: float
+        a threshold, between 0 and 1, used for selecting "high risk" records
+    - t_orange: float
+        a threshold, between 0 and t_rouge, used for selecting "moderate risk" records
+        t_orange should not be greater than t_rouge.
+        If t_orage == t_rouge, there will effectively be a single risk level (high risk)
+    """
+    assert 0 <= t_rouge <= 1, "t_rouge must be a number between 0 and 1"
+    assert 0 <= t_orange <= 1, "t_orange must be a number between 0 and 1"
+    assert t_orange <= t_rouge, "t_rouge should be greater than t_orange"
+
+    if pred > t_rouge:
+        return "Alerte seuil F1"
+    if pred > t_orange:
+        return "Alerte seuil F2"
+    return "Pas d'alerte"
+
+
+def log_splits_size(preds: pd.DataFrame, t_rouge: float, t_orange: float):
+    """
+    Generates red/orange/green flags based on two thresholds
+    """
+    assert "predicted_probability" in preds.columns.tolist()
+
+    num_rouge = sum(preds["predicted_probability"] > t_rouge)
+    num_orange = sum(preds["predicted_probability"] > t_orange)
+    num_orange -= num_rouge
+    logging.info(f"{num_rouge} rouge ({round(num_rouge/preds.shape[0] * 100, 2)}%)")
+    logging.info(f"{num_orange} orange ({round(num_orange/preds.shape[0] * 100, 2)}%)")
