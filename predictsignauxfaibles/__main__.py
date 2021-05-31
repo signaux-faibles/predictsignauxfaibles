@@ -3,17 +3,22 @@ from datetime import datetime
 import json
 import logging
 from pathlib import Path
+import pickle
 import sys
 from types import ModuleType
 
-from sklearn.metrics import fbeta_score, balanced_accuracy_score
-from sklearn.pipeline import Pipeline
+import pandas as pd
 
 from predictsignauxfaibles.config import OUTPUT_FOLDER, IGNORE_NA
-from predictsignauxfaibles.pipelines import run_pipeline
-from predictsignauxfaibles.utils import set_if_not_none, load_conf
 from predictsignauxfaibles.data import SFDataset
 from predictsignauxfaibles.explainability import explain
+from predictsignauxfaibles.evaluate import evaluate
+from predictsignauxfaibles.pipelines import run_pipeline
+from predictsignauxfaibles.utils import (
+    set_if_not_none,
+    load_conf,
+    EmptyFileError,
+)
 
 sys.path.append("../")
 
@@ -61,6 +66,25 @@ def get_train_test_predict_datasets(args_ns: argparse.Namespace, conf: ModuleTyp
     if args_ns.predict_on is not None:
         datasets["predict"].date_max = args_ns.predict_on[:-2] + "28"
 
+    if args_ns.predict_siretlist_path is not None:
+        predict_siret_list = (
+            pd.read_csv(
+                args_ns.predict_siretlist_path,
+                names=["siret"],
+                header=0,
+                index_col=False,
+            )
+            .siret.astype(str)
+            .tolist()
+        )
+
+        if predict_siret_list == []:
+            raise EmptyFileError(
+                f"File {args_ns.predict_siretlist_path} appears to be empty"
+            )
+
+        set_if_not_none(datasets["predict"], "sirets", predict_siret_list)
+
     return datasets["train"], datasets["test"], datasets["predict"]
 
 
@@ -81,22 +105,6 @@ def make_stats(train: SFDataset, test: SFDataset, predict: SFDataset):
         stats[arg] = getattr(datasets[dest[0]], dest[1])
 
     return stats
-
-
-def evaluate(
-    model: Pipeline, dataset: SFDataset, beta: float
-):  # To be turned into a SFModel method when refactoring models
-    """
-    Returns evaluation metrics of model evaluated on df
-    Args:
-        model: a sklearn-like model with a predict method
-        df: dataset
-    """
-    balanced_accuracy = balanced_accuracy_score(
-        dataset.data["outcome"], model.predict(dataset.data)
-    )
-    fbeta = fbeta_score(dataset.data["outcome"], model.predict(dataset.data), beta=beta)
-    return {"balanced_accuracy": balanced_accuracy, "fbeta": fbeta}
 
 
 def run(
@@ -168,29 +176,40 @@ def run(
     logging.info(f"{step} - Predicting on {len(predict)} observations.")
     predictions = fit.predict_proba(predict.data)
     predict.data["predicted_probability"] = predictions[:, 1]
-    logging.info(f"{step} - Computing score explanations")
-    predict = explain(predict, conf)
+
+    if args.explain:
+        logging.info(f"{step} - Computing score explanations")
+        predict = explain(predict, conf)
 
     logging.info(f"{step} - Exporting prediction data to csv")
 
-    run_path = Path(OUTPUT_FOLDER) / model_id
+    run_path = Path(OUTPUT_FOLDER) / f"{args.model_name}_{model_id}"
     run_path.mkdir(parents=True, exist_ok=True)
 
-    export_destination = f"predictions-{model_id}.csv"
-    predict.data[
-        [
-            "siren",
-            "siret",
-            "predicted_probability",
+    export_destination = "predictions.csv"
+
+    export_columns = [
+        "siren",
+        "siret",
+        "predicted_probability",
+    ]
+    if args.explain:
+        export_columns += [
             "expl_selection",
             "macro_expl",
             "micro_expl",
             "macro_radar",
         ]
-    ].to_csv(run_path / export_destination, index=False)
 
-    with open(run_path / f"stats-{model_id}.json", "w") as stats_file:
+    predict.data[export_columns].to_csv(run_path / export_destination, index=False)
+
+    with open(run_path / "stats.json", "w") as stats_file:
         stats_file.write(json.dumps(model_stats))
+
+    if args.save_model:
+        for comp_id, model_component in enumerate(conf.MODEL_PIPELINE.steps):
+            comp_filename = f"model_comp{comp_id}.pickle"
+            pickle.dump(model_component, open(run_path / comp_filename, "wb"))
 
 
 def make_parser():
@@ -204,6 +223,11 @@ def make_parser():
         type=str,
         default="default",
         help="The model to use for prediction. If not provided, models 'default' will be used",
+    )
+    parser.add_argument(
+        "--save_model",
+        action="store_true",
+        help="If this option is provided, model parameters will be saved",
     )
 
     train_args = parser.add_argument_group("Train dataset")
@@ -259,11 +283,30 @@ def make_parser():
         help="The sample size to predict on",
     )
     predict_args.add_argument(
+        "--predict_siret_list",
+        type=str,
+        dest="predict_siretlist_path",
+        help="""
+        If provided, containg the path to a file containing a list of SIRETs that themodel will predict on.
+        The input file must contain one SIRET per line, and must not include a header.
+        If more than one column is present in the file, SIRETs should be in the first column,
+        and columns should be comma-separated. Subsequent columns will be ignored.
+        In particular, no index different from SIRETs should be included as first column.  
+        """,
+    )
+    predict_args.add_argument(
         "--predict_on",
         type=str,
         help="""
         Predict on all companies for the month specified.
         To predict on April 2021, provide any date such as '2021-04-01'
+        """,
+    )
+    predict_args.add_argument(
+        "--explain",
+        action="store_true",
+        help="""
+        If provided, the contribution of features to model predictions will be computed and added to the output
         """,
     )
 

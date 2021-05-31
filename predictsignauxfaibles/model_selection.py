@@ -1,8 +1,11 @@
+import logging
 import random
 
 import numpy as np
 import pandas as pd
 from predictsignauxfaibles.decorators import is_random
+
+logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level="INFO")
 
 
 @is_random
