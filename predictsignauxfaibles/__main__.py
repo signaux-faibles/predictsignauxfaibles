@@ -14,6 +14,7 @@ from predictsignauxfaibles.data import SFDataset
 from predictsignauxfaibles.evaluate import evaluate
 from predictsignauxfaibles.explain import explain
 from predictsignauxfaibles.pipelines import run_pipeline
+from predictsignauxfaibles.redressements import ALL_REDRESSEMENTS
 from predictsignauxfaibles.utils import (
     set_if_not_none,
     load_conf,
@@ -113,6 +114,7 @@ def run(
     """
     Run model
     """
+
     conf = load_conf(args.model_name)
     logging.info(
         f"Running Model {conf.MODEL_ID} (commit {conf.MODEL_GIT_SHA}) ENV={conf.ENV}"
@@ -122,6 +124,31 @@ def run(
     train, test, predict = get_train_test_predict_datasets(args, conf)
     model_stats = make_stats(train, test, predict)
     model_stats["run_on"] = model_id
+
+    export_columns = [
+        "siren",
+        "siret",
+        "predicted_probability",
+    ]
+    if args.explain:
+        export_columns += [
+            "expl_selection",
+            "macro_expl",
+            "micro_expl",
+            "macro_radar",
+        ]
+
+    step = "[BOOT]"
+    if args.redressements is not None:
+        logging.info(f"{step} - Building Redressements (post-processing) pipeline")
+        assert len(args.redressements) == len(
+            set(args.redressements)
+        ), "A single Redressement cannot be used twice as a postprocessing step"
+
+        redressements_pp = []
+        for redr_name in args.redressements:
+            redressements_pp.append(ALL_REDRESSEMENTS[redr_name])
+            export_columns += ALL_REDRESSEMENTS[redr_name].output
 
     step = "[TRAIN]"
     model_stats["train"] = {}
@@ -181,26 +208,14 @@ def run(
         logging.info(f"{step} - Computing score explanations")
         predict = explain(predict, conf)
 
-    logging.info(f"{step} - Exporting prediction data to csv")
+    if args.redressements is not None:
+        logging.info(f"{step} - Applying redressements a posteriori")
+        predict.data = run_pipeline(predict.data, redressements_pp)
 
+    logging.info(f"{step} - Exporting prediction data to csv")
     run_path = Path(OUTPUT_FOLDER) / f"{args.model_name}_{model_id}"
     run_path.mkdir(parents=True, exist_ok=True)
-
     export_destination = "predictions.csv"
-
-    export_columns = [
-        "siren",
-        "siret",
-        "predicted_probability",
-    ]
-    if args.explain:
-        export_columns += [
-            "expl_selection",
-            "macro_expl",
-            "micro_expl",
-            "macro_radar",
-        ]
-
     predict.data[export_columns].to_csv(run_path / export_destination, index=False)
 
     with open(run_path / "stats.json", "w") as stats_file:
@@ -307,6 +322,15 @@ def make_parser():
         action="store_true",
         help="""
         If provided, the contribution of features to model predictions will be computed and added to the output
+        """,
+    )
+    predict_args.add_argument(
+        "--redressements",
+        nargs="*",
+        choices=list(ALL_REDRESSEMENTS.keys()),
+        help="""
+        List of redressements to be applied after prediction on predict set.
+        Redressement will be applied to predictions in the order that they are provided, from left to right.
         """,
     )
 

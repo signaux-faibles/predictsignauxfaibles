@@ -46,3 +46,20 @@ def redressement_urssaf_covid(data: pd.DataFrame):
     data["group_final_regle_urssaf"] = data.apply(rule, axis=1)
 
     return data
+
+
+ALL_REDRESSEMENTS = {
+    "urssaf_2020": Redressement(
+        "Redressement URSSAF evolution dette Juillet 2020",
+        redressement_urssaf_covid,
+        input=[
+            "montant_part_ouvriere_latest",
+            "montant_part_patronale_latest",
+            "montant_part_ouvriere_july2020",
+            "montant_part_patronale_july2020",
+            "cotisation_moy12m_latest",
+            "group_final",
+        ],
+        output=["group_final_regle_urssaf"],
+    ),
+}

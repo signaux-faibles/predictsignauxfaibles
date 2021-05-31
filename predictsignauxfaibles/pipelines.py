@@ -11,10 +11,7 @@ from predictsignauxfaibles.preprocessors import (
     acoss_make_avg_delta_dette_par_effectif,
 )
 
-from predictsignauxfaibles.redressements import (
-    Redressement,
-    redressement_urssaf_covid,
-)
+from predictsignauxfaibles.redressements import ALL_REDRESSEMENTS
 
 
 class MissingDataError(Exception):
@@ -117,19 +114,7 @@ SMALL_PIPELINE = [
 # Redressements
 
 REDRESSEMENTS_PIPELINE = [
-    Redressement(
-        "Redressement URSSAF evolution dette Juillet 2020",
-        redressement_urssaf_covid,
-        input=[
-            "montant_part_ouvriere_latest",
-            "montant_part_patronale_latest",
-            "montant_part_ouvriere_july2020",
-            "montant_part_patronale_july2020",
-            "cotisation_moy12m_latest",
-            "group_final",
-        ],
-        output=["group_final_regle_urssaf"],
-    ),
+    ALL_REDRESSEMENTS["urssaf_2020"],
 ]
 
 # This is useful for automatic testing
