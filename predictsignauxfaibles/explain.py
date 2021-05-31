@@ -10,7 +10,7 @@ from predictsignauxfaibles.utils import (
 )
 
 
-def list_concerning_contributions(entry: pd.Series, thr=0.07):
+def list_concerning_contributions(entry: pd.Series, thr: float = 0.07):
     """
     From a record containing dot-products of each feature with the weight vector,
     computes a list of features that contribute to a high risk of failure
@@ -20,7 +20,7 @@ def list_concerning_contributions(entry: pd.Series, thr=0.07):
     return masked[~masked.isnull()].index.tolist()
 
 
-def list_reassuring_contributions(entry: pd.Series, thr=0.07):
+def list_reassuring_contributions(entry: pd.Series, thr: float = 0.07):
     """
     From a record containing dot-products of each feature with the weight vector,
     computes a list of features that contribute to a low risk of failure
