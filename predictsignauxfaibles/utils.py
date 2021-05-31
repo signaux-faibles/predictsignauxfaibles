@@ -3,10 +3,12 @@ import importlib.util
 import logging
 import math
 from pathlib import Path
+from types import ModuleType
 from typing import List, NamedTuple
 
 import pandas as pd
 import pytz
+from sklearn.preprocessing import OneHotEncoder
 
 from predictsignauxfaibles.config import MODEL_FOLDER
 
@@ -237,3 +239,65 @@ def log_splits_size(preds: pd.DataFrame, t_rouge: float, t_orange: float):
     num_orange -= num_rouge
     logging.info(f"{num_rouge} rouge ({round(num_rouge/preds.shape[0] * 100, 2)}%)")
     logging.info(f"{num_orange} orange ({round(num_orange/preds.shape[0] * 100, 2)}%)")
+
+
+def map_cat_feature_to_categories(data: pd.DataFrame, conf: ModuleType):
+    """
+    Maps categorical features to variables built from their levels,
+    **in the order they are found in conf.FEATURE_GROUPS**
+    using a OneHotEncoder fitted to each categorical variable
+    """
+    group_feats_tuples = [
+        (group, feat)
+        for (group, feats) in conf.FEATURE_GROUPS.items()
+        for feat in feats
+    ]
+    data = data[conf.FEATURES]
+    data.columns = group_feats_tuples
+
+    cat_mapping = {}
+    for (group, feats) in conf.FEATURE_GROUPS.items():
+        for feat in feats:
+            if feat not in conf.TO_ONEHOT_ENCODE:
+                continue
+            feat_oh = OneHotEncoder()
+            feat_oh.fit(
+                data[
+                    [
+                        (group, feat),
+                    ]
+                ]
+            )
+            cat_names = feat_oh.get_feature_names().tolist()
+            cat_mapping[(group, feat)] = [feat + "_" + name for name in cat_names]
+
+    return cat_mapping
+
+
+def make_multi_columns(data: pd.DataFrame, conf: ModuleType):
+    """
+    Builds a multicolumn-compatible list of tuples,
+    corresponding to a list of (group, feature), where:
+     - group is the name of a group of features (by source or subject)
+     - feature is a variable that can be used in a model
+    Categorical variables are exploded into this list of tuples
+    """
+    # Mapping categorical vairables to their oh-encoded level variables
+    cat_mapping = map_cat_feature_to_categories(data, conf)
+
+    # Create a list of tuples than can be turned into a MultiIndex
+    multi_columns_cat = []
+    for (group, feats) in conf.FEATURE_GROUPS.items():
+        for feat in feats:
+            if (group, feat) in cat_mapping.keys():
+                for cat_feat in cat_mapping[(group, feat)]:
+                    multi_columns_cat.append((group, cat_feat))
+
+    multi_columns_nocat = [
+        (group, feat)
+        for (group, feats) in conf.FEATURE_GROUPS.items()
+        for feat in feats
+        if (group, feat) not in cat_mapping.keys()
+    ]
+
+    return multi_columns_cat + multi_columns_nocat
