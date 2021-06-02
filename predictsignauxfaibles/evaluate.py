@@ -3,6 +3,7 @@
 import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.metrics import (
+    confusion_matrix,
     precision_recall_curve,
     precision_score,
     recall_score,
@@ -131,21 +132,31 @@ def evaluate(
     balanced_accuracy = balanced_accuracy_score(
         dataset.data["outcome"], (model.predict_proba(dataset.data)[:, 1] >= thresh)
     )
+    (tn, fp, fn, tp) = confusion_matrix(
+        dataset.data["outcome"],
+        (model.predict_proba(dataset.data)[:, 1] >= thresh),
+    ).ravel()
+    fbeta = fbeta_score(
+        dataset.data["outcome"],
+        (model.predict_proba(dataset.data)[:, 1] >= thresh),
+        beta=beta,
+    )
     precision = precision_score(
         dataset.data["outcome"], (model.predict_proba(dataset.data)[:, 1] >= thresh)
     )
     recall = recall_score(
         dataset.data["outcome"], (model.predict_proba(dataset.data)[:, 1] >= thresh)
     )
-    fbeta = fbeta_score(
-        dataset.data["outcome"],
-        (model.predict_proba(dataset.data)[:, 1] >= thresh),
-        beta=beta,
-    )
 
     return {
         "balanced_accuracy": balanced_accuracy,
+        "confusion_matrix": {
+            "tn": tn,
+            "fp": fp,
+            "fn": fn,
+            "tp": tp,
+        },
+        f"f{beta}": fbeta,
         "precision": precision,
         "recall": recall,
-        f"f{beta}": fbeta,
     }
