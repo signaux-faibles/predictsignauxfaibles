@@ -28,22 +28,25 @@ def redressement_urssaf_covid(data: pd.DataFrame):
 
     tol = 0.2  # tolerate a change smaller than 20%
 
+    assert "alert" in data.columns, "'alert' was not found in data.columns"
+    data["alert_pre_redressements"] = data["alert"]
+
     def rule(dataframe):
         """
         Expert rule to apply
         """
         value = dataframe["delta_dette"]
-        group = dataframe["group_final"]
+        group = dataframe["alert_pre_redressements"]
         if value > tol:
-            if group == "vert":
-                return "orange"
-            if group == "orange":
-                return "rouge"
-            if group == "rouge":
-                return "rouge"
+            if group == "Pas d'alerte":
+                return "Alerte seuil F2"
+            if group == "Alerte seuil F2":
+                return "Alerte seuil F1"
+            if group == "Alerte seuil F1":
+                return "Alerte seuil F1"
         return group
 
-    data["group_final_regle_urssaf"] = data.apply(rule, axis=1)
+    data["alert"] = data.apply(rule, axis=1)
 
     return data
 
