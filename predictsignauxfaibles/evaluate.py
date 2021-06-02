@@ -3,6 +3,7 @@
 import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.metrics import (
+    average_precision_score,
     confusion_matrix,
     precision_recall_curve,
     precision_score,
@@ -117,7 +118,10 @@ def make_thresholds_from_conditions(
 
 
 def evaluate(
-    model: Pipeline, dataset: SFDataset, beta: float, thresh: float = 0.5
+    model: Pipeline,
+    dataset: SFDataset,
+    beta: float,
+    thresh: float = 0.5,
 ):  # To be turned into a SFModel method when refactoring models
     """
     Returns evaluation metrics of model evaluated on df
@@ -129,6 +133,10 @@ def evaluate(
             If provided, the model will classify an entry X as positive if predict_proba(X)>=thresh.
             Otherwise, the model classifies X as positive if predict(X)=1, ie predict_proba(X)>=0.5
     """
+    aucpr = average_precision_score(
+        dataset.data["outcome"],
+        model.predict_proba(dataset.data)[:, 1],
+    )
     balanced_accuracy = balanced_accuracy_score(
         dataset.data["outcome"], (model.predict_proba(dataset.data)[:, 1] >= thresh)
     )
@@ -149,6 +157,7 @@ def evaluate(
     )
 
     return {
+        "aucpr": aucpr,
         "balanced_accuracy": balanced_accuracy,
         "confusion_matrix": {
             "tn": tn,
