@@ -34,7 +34,7 @@ df_test_redressement_urssaf = pd.DataFrame(
         "montant_part_ouvriere_july2020": [50, 50, 50],
         "montant_part_patronale_july2020": [50, 50, 0],
         "cotisation_moy12m_latest": [100, 100, 75],
-        "group_final": ["vert", "vert", "rouge"],
+        "alert": ["Pas d'alerte", "Pas d'alerte", "Alerte seuil F1"],
     }
 )
 
