@@ -6,6 +6,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import List, NamedTuple
 
+import numpy as np
 import pandas as pd
 import pytz
 from sklearn.preprocessing import OneHotEncoder
@@ -228,17 +229,19 @@ def assign_flag(pred: float, t_rouge: float, t_orange: float):
     return "Pas d'alerte"
 
 
-def log_splits_size(preds: pd.DataFrame, t_rouge: float, t_orange: float):
+def log_splits_size(predicted_proba: np.array, t_rouge: float, t_orange: float):
     """
     Generates red/orange/green flags based on two thresholds
     """
-    assert "predicted_probability" in preds.columns.tolist()
-
-    num_rouge = sum(preds["predicted_probability"] > t_rouge)
-    num_orange = sum(preds["predicted_probability"] > t_orange)
+    num_rouge = sum(predicted_proba > t_rouge)
+    num_orange = sum(predicted_proba > t_orange)
     num_orange -= num_rouge
-    logging.info(f"{num_rouge} rouge ({round(num_rouge/preds.shape[0] * 100, 2)}%)")
-    logging.info(f"{num_orange} orange ({round(num_orange/preds.shape[0] * 100, 2)}%)")
+    logging.info(
+        f"{num_rouge} rouge ({round(num_rouge/len(predicted_proba) * 100, 2)}%)"
+    )
+    logging.info(
+        f"{num_orange} orange ({round(num_orange/len(predicted_proba) * 100, 2)}%)"
+    )
 
 
 def map_cat_feature_to_categories(data: pd.DataFrame, conf: ModuleType):
