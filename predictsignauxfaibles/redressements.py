@@ -61,7 +61,7 @@ ALL_REDRESSEMENTS = {
             "montant_part_ouvriere_july2020",
             "montant_part_patronale_july2020",
             "cotisation_moy12m_latest",
-            "group_final",
+            "alert",
         ],
         output=["group_final_regle_urssaf"],
     ),
