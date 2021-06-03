@@ -98,9 +98,11 @@ def explain(
     ## ------------------------------------------------------
     feats_contr = np.multiply(coefs, unraveled_data)
 
-    micro_prod = pd.DataFrame(feats_contr, columns=multi_columns_full).drop(
-        [("model_offset", "model_offset")], axis=1, inplace=False
-    )
+    micro_prod = pd.DataFrame(
+        feats_contr,
+        columns=multi_columns_full,
+        index=sf_data.data.index,
+    ).drop([("model_offset", "model_offset")], axis=1, inplace=False)
     micro_prod.columns = pd.MultiIndex.from_tuples(
         micro_prod.columns, names=["Group", "Feature"]
     )
@@ -128,6 +130,7 @@ def explain(
     micro_radar = pd.DataFrame(
         offset_feats_contr,
         columns=multi_columns_full,
+        index=sf_data.data.index,
     ).drop([("model_offset", "model_offset")], axis=1, inplace=False)
     micro_radar.columns = pd.MultiIndex.from_tuples(
         micro_radar.columns, names=["Group", "Feature"]
@@ -149,6 +152,7 @@ def explain(
     micro_expl = pd.DataFrame(
         norm_feats_contr,
         columns=multi_columns_full,
+        index=sf_data.data.index,
     )
     micro_expl.columns = pd.MultiIndex.from_tuples(
         micro_expl.columns, names=["Group", "Feature"]
