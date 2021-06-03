@@ -107,7 +107,8 @@ def explain(
 
     macro_prod = micro_prod.groupby(by="Group", axis=1).sum()
 
-    micro_prod = group_retards_paiement(micro_prod, macro_prod, multi_columns_full)
+    if "retards_paiement" in conf.FEATURE_GROUPS.keys():
+        micro_prod = group_retards_paiement(micro_prod, macro_prod, multi_columns_full)
 
     micro_select_concerning = micro_prod.apply(
         lambda s: list_concerning_contributions(s, thr=thresh_micro), axis=1
@@ -155,7 +156,8 @@ def explain(
     )
 
     macro_expl = micro_expl.groupby(by="Group", axis=1).sum()
-    micro_expl = group_retards_paiement(micro_expl, macro_expl, multi_columns_full)
+    if "retards_paiement" in conf.FEATURE_GROUPS.keys():
+        micro_expl = group_retards_paiement(micro_expl, macro_expl, multi_columns_full)
 
     # Aggregating contributions at the group level
     sf_data.data["macro_expl"] = macro_expl.apply(lambda x: x.to_dict(), axis=1)
