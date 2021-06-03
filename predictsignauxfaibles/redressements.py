@@ -96,7 +96,7 @@ def prepare_redressement_urssaf_covid(data: pd.DataFrame):
     latest.data.set_index(["siret", "siren"], inplace=True)
     july2020.data.set_index(["siret", "siren"], inplace=True)
 
-    data = data.join(july2020, rsuffix="_july2020")
-    data = data.join(latest, lsuffix="_july2020", rsuffix="latest")
+    data = data.join(july2020.data, rsuffix="_july2020")
+    data = data.join(latest.data, lsuffix="_july2020", rsuffix="latest")
 
     return data
