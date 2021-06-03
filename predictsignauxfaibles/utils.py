@@ -229,18 +229,20 @@ def assign_flag(pred: float, t_rouge: float, t_orange: float):
     return "Pas d'alerte"
 
 
-def log_splits_size(predicted_proba: np.array, t_rouge: float, t_orange: float):
+def log_splits_size(
+    predicted_proba: np.array, thresh_f1: float, thresh_f2: float
+):  # pylint: disable=line-too-long
     """
     Generates red/orange/green flags based on two thresholds
     """
-    num_rouge = sum(predicted_proba > t_rouge)
-    num_orange = sum(predicted_proba > t_orange)
-    num_orange -= num_rouge
+    num_f1 = sum(predicted_proba > thresh_f1)
+    num_f2 = sum(predicted_proba > thresh_f2)
+    num_f2 -= num_f1
     logging.info(
-        f"{num_rouge} rouge ({round(num_rouge/len(predicted_proba) * 100, 2)}%)"
+        f'Pallier "risque fort" (rouge): {num_f1} ({round(num_f1/len(predicted_proba) * 100, 2)}%)'
     )
     logging.info(
-        f"{num_orange} orange ({round(num_orange/len(predicted_proba) * 100, 2)}%)"
+        f'Pallier "risque modéré" (orange): {num_f2} ({round(num_f2/len(predicted_proba) * 100, 2)}%)'
     )
 
 
