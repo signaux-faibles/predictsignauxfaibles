@@ -1,7 +1,8 @@
 # pylint: disable=invalid-name,too-many-arguments,too-many-function-args
+import logging
 
 import numpy as np
-from sklearn.base import BaseEstimator
+import pandas as pd
 from sklearn.metrics import (
     average_precision_score,
     confusion_matrix,
@@ -15,6 +16,9 @@ from sklearn.pipeline import Pipeline
 from tqdm import tqdm
 
 from predictsignauxfaibles.data import SFDataset
+
+# Mute logs from sklean_pandas
+logging.getLogger("sklearn_pandas").setLevel(logging.WARNING)
 
 
 def make_precision_recall_curve(dataset: SFDataset, model_pipeline: Pipeline):
@@ -39,9 +43,9 @@ def make_precision_recall_curve(dataset: SFDataset, model_pipeline: Pipeline):
 
 
 def make_thresholds_from_fbeta(
-    X: np.ndarray,
-    y: np.array,
-    model: BaseEstimator,
+    features: pd.DataFrame,
+    outcomes: np.array,
+    model_pipeline: Pipeline,
     beta_F1: float = 0.5,
     beta_F2: float = 2,
     n_thr: int = 1000,
@@ -61,15 +65,15 @@ def make_thresholds_from_fbeta(
     for thr in tqdm(thresh.tolist()):
         f_beta_F1.append(
             fbeta_score(
-                y_true=y,
-                y_pred=(model.predict_proba(X)[:, 1] >= thr),
+                y_true=outcomes,
+                y_pred=(model_pipeline.predict_proba(features)[:, 1] >= thr),
                 beta=beta_F1,
             )
         )
         f_beta_F2.append(
             fbeta_score(
-                y_true=y,
-                y_pred=(model.predict_proba(X)[:, 1] >= thr),
+                y_true=outcomes,
+                y_pred=(model_pipeline.predict_proba(features)[:, 1] >= thr),
                 beta=beta_F2,
             )
         )
