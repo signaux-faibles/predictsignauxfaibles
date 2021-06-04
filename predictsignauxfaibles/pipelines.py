@@ -14,6 +14,7 @@ from predictsignauxfaibles.preprocessors import (
 from predictsignauxfaibles.redressements import (
     Redressement,
     redressement_urssaf_covid,
+    prepare_redressement_urssaf_covid,
 )
 
 
@@ -117,6 +118,18 @@ SMALL_PIPELINE = [
 # Redressements
 
 REDRESSEMENTS_PIPELINE = [
+    Redressement(
+        "Prepare redressement URSSAF",
+        prepare_redressement_urssaf_covid,
+        input=["siret", "siren"],
+        output=[
+            "montant_part_ouvriere_latest",
+            "montant_part_patronale_latest",
+            "montant_part_ouvriere_july2020",
+            "montant_part_patronale_july2020",
+            "cotisation_moy12m_latest",
+        ],
+    ),
     Redressement(
         "Redressement URSSAF evolution dette Juillet 2020",
         redressement_urssaf_covid,
