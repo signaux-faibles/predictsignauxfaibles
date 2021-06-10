@@ -154,8 +154,12 @@ class SFDataset:
         # force SIREN and SIRET to be strings
         if "siren" in self.data.columns:
             self.data.siren = self.data.siren.astype(str)
+            # pad with zeroes
+            self.data.siren = self.data.siren.apply(lambda s: s.zfill(9))
         if "siret" in self.data.columns:
             self.data.siret = self.data.siret.astype(str)
+            # pad with zeroes
+            self.data.siret = self.data.siret.apply(lambda s: s.zfill(14))
 
         return self
 
