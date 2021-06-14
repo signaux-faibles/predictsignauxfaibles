@@ -1,8 +1,11 @@
 # pylint: disable=invalid-name,too-many-arguments,too-many-function-args
+import logging
 
 import numpy as np
-from sklearn.base import BaseEstimator
+import pandas as pd
 from sklearn.metrics import (
+    average_precision_score,
+    confusion_matrix,
     precision_recall_curve,
     precision_score,
     recall_score,
@@ -13,6 +16,9 @@ from sklearn.pipeline import Pipeline
 from tqdm import tqdm
 
 from predictsignauxfaibles.data import SFDataset
+
+# Mute logs from sklean_pandas
+logging.getLogger("sklearn_pandas").setLevel(logging.WARNING)
 
 
 def make_precision_recall_curve(dataset: SFDataset, model_pipeline: Pipeline):
@@ -37,9 +43,9 @@ def make_precision_recall_curve(dataset: SFDataset, model_pipeline: Pipeline):
 
 
 def make_thresholds_from_fbeta(
-    X: np.ndarray,
-    y: np.array,
-    model: BaseEstimator,
+    features: pd.DataFrame,
+    outcomes: np.array,
+    model_pipeline: Pipeline,
     beta_F1: float = 0.5,
     beta_F2: float = 2,
     n_thr: int = 1000,
@@ -59,15 +65,15 @@ def make_thresholds_from_fbeta(
     for thr in tqdm(thresh.tolist()):
         f_beta_F1.append(
             fbeta_score(
-                y_true=y,
-                y_pred=(model.predict_proba(X)[:, 1] >= thr),
+                y_true=outcomes,
+                y_pred=(model_pipeline.predict_proba(features)[:, 1] >= thr),
                 beta=beta_F1,
             )
         )
         f_beta_F2.append(
             fbeta_score(
-                y_true=y,
-                y_pred=(model.predict_proba(X)[:, 1] >= thr),
+                y_true=outcomes,
+                y_pred=(model_pipeline.predict_proba(features)[:, 1] >= thr),
                 beta=beta_F2,
             )
         )
@@ -116,8 +122,11 @@ def make_thresholds_from_conditions(
 
 
 def evaluate(
-    model: Pipeline, dataset: SFDataset, beta: float, thresh: float = 0.5
-):  # To be turned into a SFModel method when refactoring models
+    model: Pipeline,
+    dataset: SFDataset,
+    beta: float,
+    thresh: float = 0.5,
+):  # pylint: disable=too-many-locals
     """
     Returns evaluation metrics of model evaluated on df
     Args:
@@ -127,25 +136,39 @@ def evaluate(
         thresh:
             If provided, the model will classify an entry X as positive if predict_proba(X)>=thresh.
             Otherwise, the model classifies X as positive if predict(X)=1, ie predict_proba(X)>=0.5
+    Dev note: To be turned into a SFModel method when refactoring models
     """
-    balanced_accuracy = balanced_accuracy_score(
-        dataset.data["outcome"], (model.predict_proba(dataset.data)[:, 1] >= thresh)
+    y_true = dataset.data["outcome"]
+    y_score = model.predict_proba(dataset.data)[:, 1]
+    y_pred = y_score >= thresh
+
+    aucpr = average_precision_score(
+        y_true,
+        y_score,
     )
-    precision = precision_score(
-        dataset.data["outcome"], (model.predict_proba(dataset.data)[:, 1] >= thresh)
-    )
-    recall = recall_score(
-        dataset.data["outcome"], (model.predict_proba(dataset.data)[:, 1] >= thresh)
-    )
+    balanced_accuracy = balanced_accuracy_score(y_true, y_pred)
+    (tn, fp, fn, tp) = confusion_matrix(
+        y_true,
+        y_pred,
+    ).ravel()
     fbeta = fbeta_score(
-        dataset.data["outcome"],
-        (model.predict_proba(dataset.data)[:, 1] >= thresh),
+        y_true,
+        y_pred,
         beta=beta,
     )
+    precision = precision_score(y_true, y_pred)
+    recall = recall_score(y_true, y_pred)
 
     return {
+        "aucpr": aucpr,
         "balanced_accuracy": balanced_accuracy,
+        "confusion_matrix": {
+            "tn": tn,
+            "fp": fp,
+            "fn": fn,
+            "tp": tp,
+        },
+        f"f{beta}": fbeta,
         "precision": precision,
         "recall": recall,
-        f"f{beta}": fbeta,
     }
