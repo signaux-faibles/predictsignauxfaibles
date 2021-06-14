@@ -126,7 +126,7 @@ def evaluate(
     dataset: SFDataset,
     beta: float,
     thresh: float = 0.5,
-):  # To be turned into a SFModel method when refactoring models
+):  # pylint: disable=too-many-locals
     """
     Returns evaluation metrics of model evaluated on df
     Args:
@@ -136,29 +136,28 @@ def evaluate(
         thresh:
             If provided, the model will classify an entry X as positive if predict_proba(X)>=thresh.
             Otherwise, the model classifies X as positive if predict(X)=1, ie predict_proba(X)>=0.5
+    Dev note: To be turned into a SFModel method when refactoring models
     """
+    y_true = dataset.data["outcome"]
+    y_score = model.predict_proba(dataset.data)[:, 1]
+    y_pred = y_score >= thresh
+
     aucpr = average_precision_score(
-        dataset.data["outcome"],
-        model.predict_proba(dataset.data)[:, 1],
+        y_true,
+        y_score,
     )
-    balanced_accuracy = balanced_accuracy_score(
-        dataset.data["outcome"], (model.predict_proba(dataset.data)[:, 1] >= thresh)
-    )
+    balanced_accuracy = balanced_accuracy_score(y_true, y_pred)
     (tn, fp, fn, tp) = confusion_matrix(
-        dataset.data["outcome"],
-        (model.predict_proba(dataset.data)[:, 1] >= thresh),
+        y_true,
+        y_pred,
     ).ravel()
     fbeta = fbeta_score(
-        dataset.data["outcome"],
-        (model.predict_proba(dataset.data)[:, 1] >= thresh),
+        y_true,
+        y_pred,
         beta=beta,
     )
-    precision = precision_score(
-        dataset.data["outcome"], (model.predict_proba(dataset.data)[:, 1] >= thresh)
-    )
-    recall = recall_score(
-        dataset.data["outcome"], (model.predict_proba(dataset.data)[:, 1] >= thresh)
-    )
+    precision = precision_score(y_true, y_pred)
+    recall = recall_score(y_true, y_pred)
 
     return {
         "aucpr": aucpr,
