@@ -1,6 +1,4 @@
-import logging
 import math
-import re
 from typing import List, Callable
 import numpy as np
 import pandas as pd
@@ -10,35 +8,33 @@ from predictsignauxfaibles.data import SFDataset
 
 
 class SqrtTransformer(BaseEstimator, TransformerMixin):
+    # pylint: disable = E, C
     def __init__(self):
         pass
-    
-    
-    def fit(self, X, y = None):
+
+    def fit(self):
         return self
-    
-    
-    def transform(self, X, y = None):
+
+    def transform(X):
         X_ = X.copy()
         X_ = np.sqrt(X_)
         return X_
 
 
 class LogTransformer(BaseEstimator, TransformerMixin):
+    # pylint: disable=E, C
     def __init__(self):
         pass
-    
-    
-    def fit(self, X, y = None):
+
+    def fit(self):
         return self
-    
-    
-    def transform(self, X, y = None):
+
+    def transform(X):
         X_ = X.copy()
-        X_ = np.log(X_+1)
+        X_ = np.log(X_ + 1)
         return X_
 
-    
+
 def apply_log(number: float) -> float:
     """
     Apply the transformation number -> log(number + 1)
@@ -52,13 +48,15 @@ def apply_sqrt(number: float) -> float:
     """
     return math.sqrt(number)
 
-    
+
 def print_featuring_for_model_conf(featuring: pd.DataFrame) -> str:
     """
     Print the tranformation for each feature to be plugged in a model_conf.py.
     """
-    featuring = featuring[['func', 'feature']].groupby('func').agg(list).reset_index()
-    featuring = {func:feat for (feat, func) in zip(featuring['feature'], featuring['func'])}
+    featuring = featuring[["func", "feature"]].groupby("func").agg(list).reset_index()
+    featuring = {
+        func: feat for (feat, func) in zip(featuring["feature"], featuring["func"])
+    }
     return featuring
 
 

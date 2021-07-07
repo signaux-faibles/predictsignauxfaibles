@@ -11,7 +11,7 @@ from sklearn_pandas import DataFrameMapper
 from predictsignauxfaibles.data import SFDataset, OversampledSFDataset
 from predictsignauxfaibles.pipelines import DEFAULT_PIPELINE
 from predictsignauxfaibles.utils import check_feature
-from predictsignauxfaibles.transformers import SqrtTransformer,LogTransformer
+from predictsignauxfaibles.transformers import SqrtTransformer, LogTransformer
 
 # ENV (default is "develop", can be set to "prod")
 ENV = os.getenv("ENV", "develop")
@@ -113,31 +113,31 @@ TO_ONEHOT_ENCODE = [
 ]
 
 TO_LOG = [
-    'time_til_default',
-    'montant_part_patronale',
-    'couverture_ca_besoin_fdr_past_2',
-    'montant_part_ouvriere',
-    'montant_part_patronale_past_1',
-    'montant_part_patronale_past_6',
-    'montant_part_patronale_past_12',
-    'montant_part_ouvriere_past_3',
-    'montant_part_ouvriere_past_12',
-    'debit_entreprise',
-    'apart_heures_autorisees'
+    "time_til_default",
+    "montant_part_patronale",
+    "couverture_ca_besoin_fdr_past_2",
+    "montant_part_ouvriere",
+    "montant_part_patronale_past_1",
+    "montant_part_patronale_past_6",
+    "montant_part_patronale_past_12",
+    "montant_part_ouvriere_past_3",
+    "montant_part_ouvriere_past_12",
+    "debit_entreprise",
+    "apart_heures_autorisees",
 ]
 TO_LOG = [x for x in TO_LOG if x in VARIABLES]
 
 TO_SQRT = [
-    'delai_montant_echeancier',
-    'montant_part_patronale_past_2',
-    'montant_part_patronale_past_3',
-    'montant_part_ouvriere_past_1',
-    'montant_part_ouvriere_past_6',
-    'part_salaries',
-    'part_salaries_past_1',
-    'apart_heures_consommees_cumulees',
-    'apart_entreprise',
-    'apart_heures_consommees'
+    "delai_montant_echeancier",
+    "montant_part_patronale_past_2",
+    "montant_part_patronale_past_3",
+    "montant_part_ouvriere_past_1",
+    "montant_part_ouvriere_past_6",
+    "part_salaries",
+    "part_salaries_past_1",
+    "apart_heures_consommees_cumulees",
+    "apart_entreprise",
+    "apart_heures_consommees",
 ]
 TO_SQRT = [x for x in TO_SQRT if x in VARIABLES]
 
@@ -147,16 +147,13 @@ mapper = DataFrameMapper(
     [
         (TO_ONEHOT_ENCODE, [OneHotEncoder()]),
         (TO_SCALE, [StandardScaler()]),
-        (TO_LOG, [LogTransformer(),StandardScaler()]),
+        (TO_LOG, [LogTransformer(), StandardScaler()]),
         (TO_SQRT, [SqrtTransformer(), StandardScaler()]),
     ],
 )
 
 MODEL_PIPELINE = Pipeline(
-    [
-        ("transform_dataframe", mapper),
-        ("fit_model", LogisticRegression())
-    ]
+    [("transform_dataframe", mapper), ("fit_model", LogisticRegression())]
 )
 
 # Train Dataset
