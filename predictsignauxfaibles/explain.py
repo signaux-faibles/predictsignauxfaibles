@@ -4,16 +4,23 @@ import numpy as np
 import pandas as pd
 
 from predictsignauxfaibles.data import SFDataset
-from predictsignauxfaibles.utils import (
-    sigmoid,
-    make_multi_columns,
-)
+from predictsignauxfaibles.utils import make_multi_columns, sigmoid
 
 
-def list_concerning_contributions(entry: pd.Series, thr: float = 0.07):
-    """
-    From a record containing dot-products of each feature with the weight vector,
-    computes a list of features that contribute to a high risk of failure
+def list_concerning_contributions(entry: pd.Series, thr: float = 0.07) -> list:
+    """Gives the name of features that contribute to a high risk of failure.
+
+    The list is computed From a record containing the terms of the dot-product
+    between each feature and the weight vector.
+
+    Args:
+        entry: The terms that are summed inside the dot-product.
+        thr: A given threshold.
+
+    Returns:
+        A sorted list of high-risk explanatory features. The first feature is the one
+        with greatest influence on the prediction.
+
     """
     masked = entry.where(entry >= 4 * thr)
     masked.sort_values(ascending=False, inplace=True)
@@ -21,9 +28,19 @@ def list_concerning_contributions(entry: pd.Series, thr: float = 0.07):
 
 
 def list_reassuring_contributions(entry: pd.Series, thr: float = 0.07):
-    """
-    From a record containing dot-products of each feature with the weight vector,
-    computes a list of features that contribute to a low risk of failure
+    """Gives the name of features that contribute to a low risk of failure.
+
+    The list is computed From a record containing the terms of the dot-product
+    between each feature and the weight vector.
+
+    Args:
+        entry: The terms that are summed inside the dot-product.
+        thr: A given threshold.
+
+    Returns:
+        A sorted list of low-risk explanatory features. The first feature is the one
+        with greatest influence on the prediction.
+
     """
     masked = entry.where(entry <= -4 * thr)
     masked.sort_values(ascending=True, inplace=True)
@@ -32,10 +49,20 @@ def list_reassuring_contributions(entry: pd.Series, thr: float = 0.07):
 
 def group_retards_paiement(
     micro_df: pd.DataFrame, macro_df: pd.DataFrame, group_feat_tuples: list
-):
-    """
-    Replaces micro contributions for group "retards_paiement"
-    with aggregated contribution
+) -> pd.DataFrame:
+    """Aggregates "retards_paiement" group contribution.
+
+    Replaces micro contributions for group "retards_paiement" with aggregated
+    contribution.
+
+    Args:
+        micro_df:
+        macro_df:
+        group_feat_tuples:
+
+    Returns:
+        A DataFrame with aggregated "retards_paiement" data.
+
     """
     remapped_df = micro_df.copy()
     remapped_df[[("retards_paiement", "retards_paiement")]] = macro_df[
@@ -54,24 +81,37 @@ def group_retards_paiement(
 
 def explain(
     sf_data: SFDataset, conf: ModuleType, thresh_micro: float = 0.07
-):  # pylint: disable=too-many-locals
-    """
-    Provides the relative contribution of each features to the risk score,
-    as well as relative contributions for each group of features,
-    as defined in a the model configuration file.
-    This relative contribution of feature $i$ to the score
-    for company $s$, for reglog parameter $\beta$ is defined by:
-    expl_i(s) = frac{beta_i * s_i}{|beta_0| + sum_{j=1}^{N}{|{beta_1}_j||s_j|}}
-    expl_0(s) = frac{beta_0}{|beta_0| + sum_{j=1}^{N}{|{beta_1}_j||s_j|}}
-    Arguments:
-        sf_data: SFDataset
-            A SFDataset containing predictions produced by a logistic regression
-        conf: ModuleType
-            The model configuration file used for predictions
+) -> SFDataset:
+    # pylint: disable=too-many-locals
+    """Provides further explanations about the predicted outcome.
+
+    Provides the relative contribution of each feature to the risk score, as well as
+    relative contributions for each group of features, as defined in the model
+    configuration file.
+
+    The relative contribution of feature :math:`i` to the score for company :math:`s`,
+    for logistic regression weight vector :math:`\\beta` is defined by:
+
+    .. math::
+
+       expl_i(s) = \\frac{\\beta_i * s_i}{|\\beta_0| +
+       \\sum_{j=1}^{N}{|{\\beta_1}_j| |s_j|}}
+
+       expl_0(s) = \\frac{\\beta_0}{|\\beta_0| +
+       \\sum_{j=1}^{N}{|{\\beta_1}_j| |s_j|}}
+
+    Args:
+        sf_data: A SFDataset containing predictions produced by a logistic regression
+        conf: The model configuration file used for predictions
+        thresh_micro:
+
+    Returns:
+        The input SFDataset, extended with new explicative columns.
+
     """
 
-    ## COLUMNS NAMES REGISTRATION & MAPPING
-    ## ====================================
+    ## COLUMN NAMES REGISTRATION & MAPPING
+    ## ===================================
     raveled_data = sf_data.data.copy()
 
     # Create a list of tuples that we'll use to multi-index our columns
