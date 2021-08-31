@@ -10,7 +10,8 @@ Dépôt du code python permettant la production de liste de prédiction Signaux 
 ## Installation pour un développeur/data scientist :
 
 ### Cloner et naviguer dans le repo
-```
+
+``` sh
 git clone git@github.com:signaux-faibles/predictsignauxfaibles.git
 
 ```
@@ -20,19 +21,20 @@ Pour pouvoir télécharger les packages, leurs dépendances ainsi que la documen
 
 Par exemple, pour installer un package : 
 
-```
+``` sh
 pip install --proxy socks5h://localhost:<PORT_INTERNET> <MON_PACKAGE>
 ```
+
 Pour éviter de fournir l'option --proxy à chaque fois, vous pouvez créer un fichier ~/.conf/pip/pip.conf 
 
-```
+``` sh
 mkdir -p ~/.config/pip
 nano pip.conf
 ```
 Et y ajouter la configuration suivante :
 
-```
-[global]
+``` config
+
 proxy = socks5h://localhost:<PORT_INTERNET>
 ```
 Cette configuration est cruciale pour l'installation automatique des packages indiqué dans requirements.  
@@ -41,7 +43,7 @@ Cette configuration est cruciale pour l'installation automatique des packages in
 
 Exemple avec [pyenv](https://github.com/pyenv/pyenv) :
 
-```
+``` sh
 pyenv install 3.6.4
 pyenv virtualenv 3.6.4 sf
 pyenv local sf
@@ -49,7 +51,7 @@ pyenv local sf
 
 ### installer les dépendences du projet
 
-```
+``` sh
 pip install -r requirements.txt
 ```
 
@@ -57,7 +59,7 @@ Note: la procédure sur le serveur est légèrement différente.
 
 ### activer les githooks
 
-```
+``` sh
 python -m python_githooks
 ```
 
@@ -73,13 +75,14 @@ Chaque run de modèle produit 2 fichiers dans `./model_runs/<model_id>` **qui n'
 
 La variable d'environnement `ENV` permet de faire tourner le modèle en mode `develop` (utilisant moins de données, le défaut) ou bien en `prod`:
 
-```sh
+``` sh
 export ENV=prod
 python -m predictsignauxfaibles
 ```
 
 ## Structure du Dépot
-(librement inspiré du [cookiecutter data science](https://drivendata.github.io/cookiecutter-data-science))
+
+Librement inspiré du [cookiecutter data science](https://drivendata.github.io/cookiecutter-data-science)
 
 - `lib/` contient l'essentiel du code nécéssaire à la production de listes signaux faibles.
 - `bin/` contient des scripts utiles au projet.
@@ -94,11 +97,37 @@ python -m predictsignauxfaibles
 
 ## Documentation
 
+### Démo
+
 Un notebook jupyter interactif de démo est disponible [ici](./notebooks/00-get_started.ipynb).
+
+### Générer la documentation
+
+Il est possible de générer la documentation du code à l'aide de `sphinx`. Depuis le dossier `docs/`, exécuter
+
+``` sh
+sphinx-apidoc -feP -o source/ ../predictsignauxfaibles
+```
+
+Cela génère automatiquement les fichiers `.rst` décrivant la structure de la documentation. Celle-ci peut ensuite être générée en exécutant la commande (toujours depuis `docs/`)
+
+``` sh
+make html
+```
+
+pour obtenir un dossier formattant la documentation en html (type «readthedocs.io»).
+
+Beaucoup d'autres formats d'export sont disponibles (pdf, man, texinfo); pour plus d'informations, voir
+
+``` sh
+make help
+```
+
+### Variables d'apprentissage
 
 Il est également possible de télécharger la liste des features disponibles pour le modèle Signaux Faibles, fichier `json` présent dans le dépôt Github opensignauxfaibles. Ce listing est utilisé dans le notebook de démo. 
 
-```
+``` sh
 cd notebooks
 curl --proxy socks5h://localhost:<PORT_INTERNET> -OL https://raw.githubusercontent.com/signaux-faibles/opensignauxfaibles/master/js/reduce.algo2/docs/variables.json -o variables.json
 cd ..
@@ -112,12 +141,12 @@ Dès lors, la variable d'environnement `RANDOM_SEED` permet aux fonctions aléat
 
 Au début d'un notebook, vous pouvez créer cette variable d'environnement de la manière suivante :
 
-```python
+``` python
 import os
 os.environ["RANDOM_SEED"]="42"
 ```
 
 Ou depuis le terminal :
-```sh
+``` sh
 export RANDOM_SEED=42
 ```
