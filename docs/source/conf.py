@@ -19,8 +19,8 @@ sys.path.insert(0, os.path.abspath("../predictsignauxfaibles/"))
 # -- Project information -----------------------------------------------------
 
 project = "predictsignauxfaibles"
-copyright = "2021, Simon Lebastard, Raphaël Ventura, Vincent Viers"
-author = "Simon Lebastard, Raphaël Ventura, Vincent Viers"
+copyright = "2021, the signaux-faibles contributors"
+author = "The signaux-faibles contributors."
 
 
 # -- General configuration ---------------------------------------------------
