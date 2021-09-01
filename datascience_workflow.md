@@ -124,8 +124,13 @@ Les git hooks permettent de s'assurer que certains scripts tournent automatiquem
   - `pytest`
   - faire tourner et évaluer le modèle (ça peut juste être un rappel si c'est trop lourd)
 
-L'évaluation du modèle peut produire un artefact "model_evaluation.json", 
-versionné dans git avec chaque nouvelle version du modèle.
+L'évaluation du modèle peut produire un artefact "model_evaluation.json", versionné dans git avec chaque nouvelle version du modèle.
+
+## Documentation
+
+Une documentation du code peut être générée automatiquement grâce à `sphinx` (voir [README.md](./README.md)). Celle-ci se base sur les «docstrings» des modules, classes et autres objets pythons du code, il est donc très utile de bien les documenter ! 
+
+Le format `napoleon` (variante google) est employé. Un exemple de ce format est disponible [ici](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html). On préférera indiquer les types des variables directement dans la signature d'une fonction plutôt que dans la docstring.
 
 ## Securité et Configuration :construction_worker:
 
