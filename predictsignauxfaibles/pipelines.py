@@ -1,35 +1,41 @@
-from collections import namedtuple
 import logging
+from collections import namedtuple
 from typing import List
+
 import pandas as pd
 
 from predictsignauxfaibles.preprocessors import (
     Preprocessor,
-    remove_administrations,
+    acoss_make_avg_delta_dette_par_effectif,
     paydex_make_groups,
     paydex_make_yoy,
-    acoss_make_avg_delta_dette_par_effectif,
+    remove_administrations,
 )
-
 from predictsignauxfaibles.redressements import (
     Redressement,
-    redressement_urssaf_covid,
     prepare_redressement_urssaf_covid,
+    redressement_urssaf_covid,
 )
 
 
 class MissingDataError(Exception):
-    """
-    Custom error type for `run_pipeline`
-    """
+    """Custom error type for `run_pipeline`."""
 
 
 def run_pipeline(data: pd.DataFrame, pipeline: List[namedtuple]):
-    """
-    Run a pipeline of Preprocessor or Redressement objects (aka "steps") on a dataframe
+    """Runs a pipeline on a pd.DataFrame.
+
+    The pipeline can contain Preprocessor or Redressement objects (aka "steps").
+
     Args:
-        pipeline: a list of Preprocessor or Redressement objects
-          (see predictsignauxfaibles.preprocessors or predictsignauxfaibles.redressements)
+        data: The data to process.
+        pipeline: A list of Preprocessor or Redressement objects.
+          (see `predictsignauxfaibles.preprocessors` or
+          `predictsignauxfaibles.redressements`)
+
+    Returns:
+        A processed DataFrame.
+
     """
     logging.info("Checking that input columns are all there.")
     for step in pipeline:
@@ -57,7 +63,7 @@ did not produce expected output {missing_output_cols}"
     return data
 
 
-# Pipelines
+### Pipelines
 
 # Preprocessors
 
@@ -146,4 +152,5 @@ REDRESSEMENTS_PIPELINE = [
 ]
 
 # This is useful for automatic testing
+
 ALL_PIPELINES = [DEFAULT_PIPELINE, SMALL_PIPELINE, REDRESSEMENTS_PIPELINE]

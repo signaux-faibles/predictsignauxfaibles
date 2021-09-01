@@ -1,5 +1,5 @@
-from collections import namedtuple
 import logging
+from collections import namedtuple
 
 import pandas as pd
 
@@ -9,11 +9,20 @@ Redressement = namedtuple("Redressement", ["name", "function", "input", "output"
 
 
 def redressement_urssaf_covid(data: pd.DataFrame):
-    """
-    Règle experte
-    """
+    """Executes post-processing "expert rule" decision.
 
-    # compute change in social debt as a proportion of average cotisations over the past 12months
+    The expert rule is based on URSSAF debt data.
+
+    Args:
+        data: The data to post-process.
+
+    Returns:
+        The pd.DataFrame with a new "group_final_regle urssaf" column containing
+        post-processed alert levels.
+
+    """
+    # Compute changes in social debt as a proportion of average cotisations over the
+    # past 12months
     data["montant_part_ouvriere_latest"].fillna(0, inplace=True)
     data["montant_part_patronale_latest"].fillna(0, inplace=True)
     data["montant_part_ouvriere_july2020"].fillna(0, inplace=True)
@@ -32,9 +41,7 @@ def redressement_urssaf_covid(data: pd.DataFrame):
     tol = 0.2  # tolerate a change smaller than 20%
 
     def rule(dataframe):
-        """
-        Expert rule to apply
-        """
+        """Expert rule to apply."""
         value = dataframe["delta_dette"]
         group = dataframe["group_final"]
         if value > tol:
@@ -52,10 +59,15 @@ def redressement_urssaf_covid(data: pd.DataFrame):
 
 
 def prepare_redressement_urssaf_covid(data: pd.DataFrame):
-    """
-    Fetch and prepare data needed for `redressement_urssaf_covid`
-    """
+    """Fetches and prepares data needed for `redressement_urssaf_covid`.
 
+    Args:
+        data: The data to post-process.
+
+    Returns:
+        The pd.DataFrame with new data.
+
+    """
     latest_data = "2021-01-01"
     logging.info(f"Fetching latest ({latest_data}) URSSAF data for redressement")
     latest = (

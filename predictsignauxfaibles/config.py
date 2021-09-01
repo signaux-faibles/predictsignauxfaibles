@@ -2,13 +2,13 @@ import os
 from pathlib import Path
 from typing import NamedTuple
 
-from dotenv import load_dotenv, find_dotenv
-
+from dotenv import find_dotenv, load_dotenv
 
 # SETTING ENV VARIABLES
 # ======================
 # find .env automagically by walking up directories until it's found
 dotenv_path = find_dotenv()
+
 # load up the entries as environment variables
 load_dotenv(dotenv_path)
 
@@ -20,17 +20,11 @@ MODEL_FOLDER = os.path.join(PACKAGE_ROOTDIR, "models")
 
 # SETTING DEFAULT MONGODB PARAMS
 # ==============================
-
 # MongoDB parameters
-class MongoParams(NamedTuple):  # pylint: disable=too-few-public-methods
-    """
-    MongoDb parameters used in config
-    """
 
-    url: str
-    db: str
-    collection: str
-
+MongoParams = NamedTuple(
+    "MongoParams", [("url", str), ("db", str), ("collection", str)]
+)
 
 MONGODB_PARAMS = MongoParams(
     url=os.getenv("MONGO_URL", "mongodb://localhost"),

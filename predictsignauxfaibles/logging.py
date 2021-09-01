@@ -1,10 +1,12 @@
 import logging
+
 from pymongo import monitoring
 
 
 class CommandLogger(monitoring.CommandListener):
-    """
-    Log MongoDb Commands. Useful for debugging.
+    """Class for MongoDB commands logging.
+
+    Useful for debugging.
     """
 
     def started(self, event):
