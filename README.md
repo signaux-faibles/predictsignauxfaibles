@@ -103,24 +103,24 @@ Un notebook jupyter interactif de démo est disponible [ici](./notebooks/00-get_
 
 ### Générer la documentation
 
-Il est possible de générer la documentation du code à l'aide de `sphinx`. Depuis le dossier `docs/`, exécuter
-
-``` sh
-sphinx-apidoc -feP -o source/ ../predictsignauxfaibles
-```
-
-Cela génère automatiquement les fichiers `.rst` décrivant la structure de la documentation. Celle-ci peut ensuite être générée en exécutant la commande (toujours depuis `docs/`)
+La documentation peut être générée en exécutant la commande (toujours depuis `docs/`)
 
 ``` sh
 make html
 ```
 
-pour obtenir un dossier formattant la documentation en html (type «readthedocs.io»).
+pour obtenir un dossier formattant la documentation en html (type «readthedocs.io»). Celle-ci est ensuite navigable en ouvrant `docs/build_/html/index.html`
 
 Beaucoup d'autres formats d'export sont disponibles (pdf, man, texinfo); pour plus d'informations, voir
 
 ``` sh
 make help
+```
+
+La documentation est générée grâce aux fichiers `.rst` contenus dans le dossier `docs/source`. Si besoin, ceux-ci peuvent être automatiquement générés à l'aide de `sphinx` : depuis le dossier `docs/`, exécuter
+
+``` sh
+sphinx-apidoc -fP -o source/ ../predictsignauxfaibles
 ```
 
 ### Variables d'apprentissage
