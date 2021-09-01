@@ -23,12 +23,14 @@ def make_sf_train_test_splits(
     Returns:
         A dictionary with the following structure :
 
+            `
             {
                 "{fold_number}": {
                     "train_on": [{indices}],
                     "test_on": [{indices}]
                 }
             }
+            `
 
     """
     if "siren" not in train_data.columns or "siren" not in test_data.columns:

@@ -7,7 +7,7 @@ from typing import Callable
 def is_random(fun: Callable) -> Callable:
     """Decorator for functions that imply randomness.
 
-    Functions annotated with @is_random will be seeded if the RANDOM_SEED environment
+    Functions annotated with `@is_random` will be seeded if the RANDOM_SEED environment
     variable is found.
 
     Args:

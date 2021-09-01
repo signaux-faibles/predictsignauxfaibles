@@ -3,7 +3,7 @@ from typing import Iterable
 
 import pandas as pd
 from numpy import nan as NAN
-from numpy.random import rand, randint
+from numpy import random
 from pymongo import MongoClient, monitoring
 from pymongo.cursor import Cursor
 
@@ -31,8 +31,8 @@ class SFDataset:
         outcome: Restrict query to firms that fall in a specific outcome (True / False)
         sirets: A list of SIRET to select
         sirens: A list of SIREN to select
-        min_effectif: Min number of employees for firm to be in the sample (defaults to your
-          .env)
+        min_effectif: Min number of employees for firm to be in the sample (defaults to
+         your `.env` value)
         **categorical_filters: Can be any filter in the form `field = ["a", "b", "c"]`
 
     """
@@ -383,7 +383,7 @@ def build_synthetic_dataset(
     ]
 
     # Building a random ranking by ape3 that we will use to generate synthetics
-    models["ranker"] = rand(models.shape[0])
+    models["ranker"] = random.rand(models.shape[0])
     models["within_ape3_id"] = models.groupby("code_ape_niveau3")["ranker"].rank()
     models["within_ape3_group_id"] = models["within_ape3_id"] % group_size
 
@@ -415,7 +415,7 @@ def build_synthetic_dataset(
         how="inner",
     )
 
-    synthetic["siret"] = randint(1e13, 1e14 - 1, len(synthetic)).astype(str)
+    synthetic["siret"] = random.randint(1e13, 1e14 - 1, len(synthetic)).astype(str)
     synthetic["siren"] = synthetic["siret"].apply(lambda siret: siret[:9])
 
     synthetic.set_index("siret", inplace=True, drop=False)
