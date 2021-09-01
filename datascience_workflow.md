@@ -130,7 +130,12 @@ L'évaluation du modèle peut produire un artefact "model_evaluation.json", vers
 
 Une documentation du code peut être générée automatiquement grâce à `sphinx` (voir [README.md](./README.md)). Celle-ci se base sur les «docstrings» des modules, classes et autres objets pythons du code, il est donc très utile de bien les documenter ! 
 
-Le format `napoleon` (variante google) est employé. Un exemple de ce format est disponible [ici](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html). On préférera indiquer les types des variables directement dans la signature d'une fonction plutôt que dans la docstring.
+Le format `napoleon` (variante google) est employé. Un exemple de ce format est disponible [ici](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html). Quelques éléments importants du format des docstrings :
+- La première ligne est une courte description de l'objet.
+- Des sauts de lignes séparent la première ligne, la description plus longue, les arguments, la valeur renvoyée.
+- Si la ligne de description d'un argument dépasse la longueur maximale autorisée, on indente la ligne suivante de deux espaces.
+- On préférera indiquer les types des variables d'entrée et de sortie directement dans la signature d'une fonction plutôt que dans la docstring.
+- Il est possible d'intégrer des équations à l'aide de la directive `:math:`.
 
 ## Securité et Configuration :construction_worker:
 
