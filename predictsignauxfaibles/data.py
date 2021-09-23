@@ -29,11 +29,11 @@ class SFDataset:
         fields: Which fields of the Features collection to retrieve. Default is all.
         sample_size: Max number of (siret x period) rows to retrieve. Default is 1000.
         outcome: Restrict query to firms that fall in a specific outcome (True / False)
-        sirets: A list of SIRET to select
-        sirens: A list of SIREN to select
+        sirets: A list of SIRET to select.
+        sirens: A list of SIREN to select.
         min_effectif: Min number of employees for firm to be in the sample (defaults to
          your `.env` value)
-        **categorical_filters: Can be any filter in the form `field = ["a", "b", "c"]`
+        **categorical_filters: Can be any filter in the form `field = ["a", "b", "c"]`.
 
     """
 

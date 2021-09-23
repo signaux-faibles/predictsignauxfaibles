@@ -14,7 +14,7 @@ def merge_models(model_list: List[pd.DataFrame]) -> pd.DataFrame:
 
     Args:
         model_list: A list of pandas DataFrame containing, at least, the following
-          columns: 'siren', 'predicted_probability'
+          columns: `siren`, `predicted_probability`.
 
     Returns:
         A DataFrame with merged predicted probabilities.

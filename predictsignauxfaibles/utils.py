@@ -243,6 +243,7 @@ def log_splits_size(
         predicted_proba: An array of predictions.
         thresh_f1: The first threshold.
         thresh_f2: The second threshold.
+
     """
     num_f1 = sum(predicted_proba > thresh_f1)
     num_f2 = sum(predicted_proba > thresh_f2)
@@ -255,7 +256,7 @@ def log_splits_size(
     )
 
 
-def map_cat_feature_to_categories(data: pd.DataFrame, conf: ModuleType):
+def map_cat_feature_to_categories(data: pd.DataFrame, conf: ModuleType) -> dict:
     """Maps categorical features to variables.
 
     The categories are built from feature levels **in the same order that they are
@@ -267,6 +268,7 @@ def map_cat_feature_to_categories(data: pd.DataFrame, conf: ModuleType):
         conf: A configuration module.
 
     Returns:
+        A dictionary mapping categorical variables.
 
     """
     group_feats_tuples = [
@@ -311,6 +313,7 @@ def make_multi_columns(data: pd.DataFrame, conf: ModuleType) -> List[Tuple]:
 
     Returns:
         The list of (group, feat) tuples.
+
     """
     # Mapping categorical variables to their oh-encoded level variables.
     cat_mapping = map_cat_feature_to_categories(data, conf)

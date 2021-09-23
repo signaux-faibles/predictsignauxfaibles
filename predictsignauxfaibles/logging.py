@@ -7,6 +7,7 @@ class CommandLogger(monitoring.CommandListener):
     """Class for MongoDB commands logging.
 
     Useful for debugging.
+
     """
 
     def started(self, event):

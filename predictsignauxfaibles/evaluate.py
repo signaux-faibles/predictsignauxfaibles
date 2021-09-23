@@ -32,7 +32,7 @@ def make_precision_recall_curve(
 
     Args:
         dataset: An SFDataset object containing the data to be evaluated on
-        Model_pipeline must be a Pipeline object containing two steps:
+        model_pipeline : A Pipeline object containing two steps:
           - a DataFrameMapper fitted on data similar to dataset.data
           - a model (for instance: `sklearn.linear.LogisticRegression`)
             fitted on data similar to dataset.data
@@ -74,7 +74,7 @@ def make_thresholds_from_fbeta(
     We choose to define both alert levels as the thresholds that maximize
     :math:`F_\\beta` for a given :math:`\\beta`. Typically, F1 alert threshold is tuned
     to favour precision (e.g., :math:`\\beta = 0.5`), while F2 alert threshold favors
-    recall (e.g., :math:`\\beta = 0.5`).
+    recall (e.g., :math:`\\beta = 2`).
 
     Args:
         features: The features used for prediction.

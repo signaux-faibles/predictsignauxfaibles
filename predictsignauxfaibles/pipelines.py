@@ -31,7 +31,7 @@ def run_pipeline(data: pd.DataFrame, pipeline: List[namedtuple]):
         data: The data to process.
         pipeline: A list of Preprocessor or Redressement objects.
           (see `predictsignauxfaibles.preprocessors` or
-          `predictsignauxfaibles.redressements`)
+          `predictsignauxfaibles.redressements`).
 
     Returns:
         A processed DataFrame.
