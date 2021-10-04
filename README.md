@@ -2,6 +2,8 @@
 
 Dépôt du code python permettant la production de liste de prédiction Signaux Faibles.
 
+⚠️ ce dépôt est aujourd'hui archivé est n'est plus en cours de développement ! En effet, la partie data science du projet Signaux Faibles a migrée sur le lac de données de la DGFiP dans le cadre d'une évolution du partenariat et a donc changé d'environnement technique.
+
 ## Dépendances / pré-requis
 
 - python 3.6.4
