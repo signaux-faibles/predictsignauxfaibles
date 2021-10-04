@@ -28,3 +28,20 @@ and this project is versionned in the `YY.MM` format corresponding to the month 
 
 ### Fixed
 - Nothing, it's our first release :smile: :tada:
+
+
+## [21.09] - September 2021
+### Added
+- Created documentation using Sphinx
+- Created synthetic data generation capabilities
+- Created [explainability module](/predictsignauxfaibles/explain.py)
+- Created a [CLI](/predictsignauxfaibles/__main__.py) to easily parameterize model training runs
+- Created [model config files](/models)
+- Created "redressements experts" capacities [starting with a URSSAF-based rule](/predictsignauxfaibles/redressements.py)
+- Created [evaluation module](/predictsignauxfaibles/evaluate.py)
+
+### Fixed
+- fill missing fields after fetching data
+- merging redundant operations on data.columns
+- force siren and sirets to be strings + pad them to 9 characters
+- downgrade jedi version to fix auto-complete bug with ipython.

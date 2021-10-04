@@ -1,16 +1,15 @@
 """
-models that are not implemented in scikit-learn must be added to this module
-they must implement the sklearn API for predictors
-see: https://scikit-learn.org/stable/developers/develop.html
+Models that are not implemented in scikit-learn must be added to this module, they must
+implement the sklearn API for predictors.
+
+See: https://scikit-learn.org/stable/developers/develop.html
 """
 
 from sklearn.base import BaseEstimator
 
 
 class SFModel(BaseEstimator):
-    """
-    Base sklearn estimator
-    """
+    """Base sklearn estimator."""
 
     def __init__(self):
         pass

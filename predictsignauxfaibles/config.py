@@ -1,29 +1,39 @@
 import os
+from pathlib import Path
+from typing import NamedTuple
 
-from dotenv import load_dotenv, find_dotenv
+from dotenv import find_dotenv, load_dotenv
 
-from predictsignauxfaibles.utils import MongoParams
-
+# SETTING ENV VARIABLES
+# ======================
 # find .env automagically by walking up directories until it's found
 dotenv_path = find_dotenv()
+
 # load up the entries as environment variables
 load_dotenv(dotenv_path)
 
 ENV = os.getenv("ENV", "develop")
+MIN_EFFECTIF = int(os.getenv("MIN_EFFECTIF"))
+PACKAGE_ROOTDIR = Path(__file__).parent.parent
+OUTPUT_FOLDER = os.path.join(PACKAGE_ROOTDIR, "model_runs")
+MODEL_FOLDER = os.path.join(PACKAGE_ROOTDIR, "models")
 
+# SETTING DEFAULT MONGODB PARAMS
+# ==============================
 # MongoDB parameters
+
+MongoParams = NamedTuple(
+    "MongoParams", [("url", str), ("db", str), ("collection", str)]
+)
+
 MONGODB_PARAMS = MongoParams(
     url=os.getenv("MONGO_URL", "mongodb://localhost"),
     db=os.getenv("MONGO_DB", "prod"),
     collection=os.getenv("MONGO_COLLECTION", "Features"),
 )
 
-# Other parameters (maybe group them into coherent groups one day...)
-MIN_EFFECTIF = int(os.getenv("MIN_EFFECTIF"))
-
-# Output folder for model runs
-OUTPUT_FOLDER = "model_runs"
-
+# SETTING PACKAGE-WIDE DEFAULT VALUES
+# ===================================
 # Default values for data
 
 DEFAULT_DATA_VALUES = {

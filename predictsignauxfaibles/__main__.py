@@ -1,17 +1,21 @@
 import argparse
-from datetime import datetime
-import importlib.util
 import json
-from pathlib import Path
-import sys
 import logging
+import pickle
+import sys
+from datetime import datetime
+from pathlib import Path
 from types import ModuleType
+from typing import Mapping, Tuple
 
-from sklearn.metrics import fbeta_score, balanced_accuracy_score
-from predictsignauxfaibles.config import OUTPUT_FOLDER, IGNORE_NA
-from predictsignauxfaibles.pipelines import run_pipeline
-from predictsignauxfaibles.utils import set_if_not_none
+import pandas as pd
+
+from predictsignauxfaibles.config import IGNORE_NA, OUTPUT_FOLDER
 from predictsignauxfaibles.data import SFDataset
+from predictsignauxfaibles.evaluate import evaluate
+from predictsignauxfaibles.explain import explain
+from predictsignauxfaibles.pipelines import run_pipeline
+from predictsignauxfaibles.utils import EmptyFileError, load_conf, set_if_not_none
 
 sys.path.append("../")
 
@@ -33,38 +37,26 @@ ARGS_TO_ATTRS = {
 }
 
 
-def load_conf(args: argparse.Namespace):  # pylint: disable=redefined-outer-name
-    """
-    Loads a model configuration from a argparse.Namespace
-    containing a model name
+def get_train_test_predict_datasets(
+    args_ns: argparse.Namespace, conf: ModuleType
+) -> Tuple[SFDataset, SFDataset, SFDataset]:
+    """Prepares datasets for processing.
+
+    Configures `train`, `test` and `predict` datasets pertaining to the user-provided
+    options.
+
     Args:
-        conf_args: a argparse.Namespace object containing attributes
-            model_name
-    """
-    conf_filepath = Path("models") / args.model_name / "model_conf.py"
-    if not conf_filepath.exists():
-        raise ValueError(f"{conf_filepath} does not exist")
+        args_ns: a argpast Namespace object containing the custom attributes to be used
+          for training, testing and/or prediction.
+        conf: the model configuration module containing default parameters, to be
+          overwritten by the content of args_ns.
 
-    spec = importlib.util.spec_from_file_location(
-        f"models.{args.model_name}.model_conf", conf_filepath
-    )
-    model_conf = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(model_conf)  # pylint: disable=wrong-import-position
-    return model_conf
-
-
-def get_train_test_predict_datasets(args_ns: argparse.Namespace, conf: ModuleType):
-    """
-    Configures train, test and predict dataset from user-provided options when pertaining.
-    Args:
-      args_ns: a argpast Namespace object containing
-      the custom attributes to be used for training, testing and/or prediction
-      conf: the model configuration module containing default parameters,
-      to be overwritten by the content of args_ns
     Returns:
-      train: a SFDataset object containing the training data
-      test: a SFDataset object containing the test data
-      predict: a SFDataset object containing the data to predict on
+        Tuple:
+        - train: a SFDataset object containing the training data.
+        - test: a SFDataset object containing the test data.
+        - predict: a SFDataset object containing the data to predict on.
+
     """
     datasets = {
         "train": conf.TRAIN_DATASET,
@@ -79,18 +71,41 @@ def get_train_test_predict_datasets(args_ns: argparse.Namespace, conf: ModuleTyp
     if args_ns.predict_on is not None:
         datasets["predict"].date_max = args_ns.predict_on[:-2] + "28"
 
+    if args_ns.predict_siretlist_path is not None:
+        predict_siret_list = (
+            pd.read_csv(
+                args_ns.predict_siretlist_path,
+                names=["siret"],
+                header=0,
+                index_col=False,
+            )
+            .siret.astype(str)
+            .tolist()
+        )
+
+        if predict_siret_list == []:
+            raise EmptyFileError(
+                f"File {args_ns.predict_siretlist_path} appears to be empty"
+            )
+
+        set_if_not_none(datasets["predict"], "sirets", predict_siret_list)
+
     return datasets["train"], datasets["test"], datasets["predict"]
 
 
-def make_stats(train: SFDataset, test: SFDataset, predict: SFDataset):
-    """
-    Initialises a dictionary containing model run stats for logging purposes
+def make_stats(
+    train: SFDataset, test: SFDataset, predict: SFDataset
+) -> Mapping[str, SFDataset]:
+    """Initializes a dictionary containing model run stats for logging purposes.
+
     Args:
-      train: a SFDataset object containing the training data
-      test: a SFDataset object containing the test data
-      predict: a SFDataset object containing the data to predict on
+        train: a SFDataset object containing the training data.
+        test: a SFDataset object containing the test data.
+        predict: a SFDataset object containing the data to predict on.
+
     Returns:
-      stats: a dictionnary containing model run parameters
+        A dictionary containing model run parameters.
+
     """
     stats = {}
     datasets = {"train": train, "test": test, "predict": predict}
@@ -101,29 +116,11 @@ def make_stats(train: SFDataset, test: SFDataset, predict: SFDataset):
     return stats
 
 
-def evaluate(
-    model, dataset, beta
-):  # To be turned into a SFModel method when refactoring models
-    """
-    Returns evaluation metrics of model evaluated on df
-    Args:
-        model: a sklearn-like model with a predict method
-        df: dataset
-    """
-    balanced_accuracy = balanced_accuracy_score(
-        dataset.data["outcome"], model.predict(dataset.data)
-    )
-    fbeta = fbeta_score(dataset.data["outcome"], model.predict(dataset.data), beta=beta)
-    return {"balanced_accuracy": balanced_accuracy, "fbeta": fbeta}
-
-
 def run(
     args,
 ):  # pylint: disable=too-many-statements,too-many-locals
-    """
-    Run model
-    """
-    conf = load_conf(args)
+    """Runs a model."""
+    conf = load_conf(args.model_name)
     logging.info(
         f"Running Model {conf.MODEL_ID} (commit {conf.MODEL_GIT_SHA}) ENV={conf.ENV}"
     )
@@ -187,31 +184,57 @@ def run(
     predictions = fit.predict_proba(predict.data)
     predict.data["predicted_probability"] = predictions[:, 1]
 
+    export_columns = [
+        "siren",
+        "siret",
+        "predicted_probability",
+    ]
+
+    if args.predict_explain:
+        logging.info(f"{step} - Computing score explanations")
+        predict = explain(predict, conf)
+        export_columns += [
+            "expl_selection",
+            "macro_expl",
+            "micro_expl",
+            "macro_radar",
+        ]
+
     logging.info(f"{step} - Exporting prediction data to csv")
 
-    run_path = Path(OUTPUT_FOLDER) / model_id
+    run_path = Path(OUTPUT_FOLDER) / f"{args.model_name}_{model_id}"
     run_path.mkdir(parents=True, exist_ok=True)
 
-    export_destination = f"predictions-{model_id}.csv"
-    predict.data[["siren", "siret", "predicted_probability"]].to_csv(
-        run_path / export_destination, index=False
-    )
+    export_destination = "predictions.csv"
 
-    with open(run_path / f"stats-{model_id}.json", "w") as stats_file:
+    predict.data[export_columns].to_csv(run_path / export_destination, index=False)
+
+    with open(run_path / "stats.json", "w") as stats_file:
         stats_file.write(json.dumps(model_stats))
 
+    if args.save_model:
+        for comp_id, model_component in enumerate(conf.MODEL_PIPELINE.steps):
+            comp_filename = f"model_comp{comp_id}.pickle"
+            pickle.dump(model_component, open(run_path / comp_filename, "wb"))
 
-def make_parser():
-    """
-    Builds a parser object with all arguments to run a custom version of prediction
-    """
+
+def make_parser() -> argparse.ArgumentParser:
+    """Builds a CLI parser object that fetches all learning / prediction parameters."""
     parser = argparse.ArgumentParser("main.py", description="Run model prediction")
 
     parser.add_argument(
         "--model_name",
         type=str,
         default="default",
-        help="The model to use for prediction. If not provided, models 'default' will be used",
+        help="""
+        The model to use for prediction. If not provided, 'default' model will be
+        used.
+        """,
+    )
+    parser.add_argument(
+        "--save_model",
+        action="store_true",
+        help="If this option is provided, model parameters will be saved",
     )
 
     train_args = parser.add_argument_group("Train dataset")
@@ -219,7 +242,7 @@ def make_parser():
         "--train_sample",
         type=int,
         dest="train_spl_size",
-        help="Train the model on data from this date",
+        help="The sample size to train the model on.",
     )
     train_args.add_argument(
         "--oversampling",
@@ -227,7 +250,7 @@ def make_parser():
         dest="train_proportion_positive_class",
         help="""
         Enforces the ratio of positive observations
-        (entreprises en defaillance) to be the specified ratio
+        ("entreprises en défaillance") to be the specified ratio
         """,
     )
     train_args.add_argument(
@@ -267,11 +290,30 @@ def make_parser():
         help="The sample size to predict on",
     )
     predict_args.add_argument(
+        "--predict_siret_list",
+        type=str,
+        dest="predict_siretlist_path",
+        help="""
+        Path to a file containing a list of SIRETs that the model will predict on.
+        The input file must contain one SIRET per line, and must not include a header.
+        If more than one column is present in the file, SIRETs should be in the first column,
+        and columns should be comma-separated. Subsequent columns will be ignored.
+        In particular, no index different from SIRETs should be included as first column.
+        """,
+    )
+    predict_args.add_argument(
         "--predict_on",
         type=str,
         help="""
-        Predict on all companies for the month specified.
-        To predict on April 2021, provide any date such as '2021-04-01'
+        Predict on all companies for the specified month.
+        For example, to predict for April 2021, provide any date such as '2021-04-01'
+        """,
+    )
+    predict_args.add_argument(
+        "--predict_explain",
+        action="store_true",
+        help="""
+        If provided, the contribution of features to model predictions will be computed and added to the output
         """,
     )
 

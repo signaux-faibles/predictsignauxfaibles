@@ -8,6 +8,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn_pandas import DataFrameMapper
 
+from predictsignauxfaibles.data import SFDataset, OversampledSFDataset
 from predictsignauxfaibles.pipelines import SMALL_PIPELINE
 from predictsignauxfaibles.utils import check_feature
 
@@ -53,12 +54,19 @@ VARIABLES += ["outcome", "periode", "siret", "siren", "time_til_outcome", "code_
 TRANSFO_PIPELINE = SMALL_PIPELINE
 
 # features
-FEATURES = [
-    "apart_heures_consommees_cumulees",
-    "apart_heures_consommees",
-    "ratio_dette",
-    "avg_delta_dette_par_effectif",
-]
+FEATURE_GROUPS = {
+    "activite_partielle": [
+        "apart_heures_consommees_cumulees",
+        "apart_heures_consommees",
+    ],
+    "dette_urssaf": [
+        "ratio_dette",
+        "avg_delta_dette_par_effectif",
+    ],
+    "miscellaneous": [],
+}
+
+FEATURES = [feat for group_feats in FEATURE_GROUPS.values() for feat in group_feats]
 
 for feature in FEATURES:
     if not check_feature(feature, VARIABLES, TRANSFO_PIPELINE):
@@ -68,6 +76,10 @@ for feature in FEATURES:
 
 # model
 TO_ONEHOT_ENCODE = []
+# /!\ Onehot variables must be listed in the same order as in features, for explain function
+TO_ONEHOT_ENCODE = [
+    to_oh_enc for to_oh_enc in FEATURES if to_oh_enc in TO_ONEHOT_ENCODE
+]
 TO_SCALE = list(set(FEATURES) - set(TO_ONEHOT_ENCODE))
 
 mapper = DataFrameMapper(
@@ -85,15 +97,34 @@ TRAIN_FROM = "2016-01-01"
 TRAIN_TO = "2018-06-30"
 TRAIN_SAMPLE_SIZE = 1_000_000 if ENV == "prod" else 5_000
 TRAIN_OVERSAMPLING = 0.2
+TRAIN_DATASET = OversampledSFDataset(
+    TRAIN_OVERSAMPLING,
+    date_min=TRAIN_FROM,
+    date_max=TRAIN_TO,
+    fields=VARIABLES,
+    sample_size=TRAIN_SAMPLE_SIZE,
+)
 
 # Test Dataset
 TEST_FROM = "2018-07-01"
 TEST_TO = "2018-10-31"
 TEST_SAMPLE_SIZE = 250_000 if ENV == "prod" else 5_000
+TEST_DATASET = SFDataset(
+    date_min=TEST_FROM,
+    date_max=TEST_TO,
+    fields=VARIABLES,
+    sample_size=TEST_SAMPLE_SIZE,
+)
 
 # Predict Dataset
 PREDICT_ON = "2020-02-01"
 PREDICT_SAMPLE_SIZE = 1_000_000_000 if ENV == "prod" else 5_000
+PREDICT_DATASET = SFDataset(
+    date_min=PREDICT_ON,
+    date_max=PREDICT_ON[:-2] + "28",
+    fields=VARIABLES,
+    sample_size=PREDICT_SAMPLE_SIZE,
+)
 
 # Evaluation parameters
 EVAL_BETA = 2

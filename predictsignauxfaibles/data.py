@@ -1,39 +1,43 @@
 import logging
+from typing import Iterable
 
 import pandas as pd
+from numpy import nan as NAN
+from numpy import random
 from pymongo import MongoClient, monitoring
 from pymongo.cursor import Cursor
 
 import predictsignauxfaibles.config as config
+from predictsignauxfaibles.decorators import is_random
 from predictsignauxfaibles.logging import CommandLogger
 from predictsignauxfaibles.utils import MongoDBQuery
-from predictsignauxfaibles.decorators import is_random
-
 
 monitoring.register(CommandLogger())  # loglevel is debug
 
 
 class SFDataset:
-    """
-    Retrieve a Signaux Faibles dataset.
+    """Retrieve a Signaux Faibles dataset.
+
     All arguments are optional. The default is a random sample of 1000 observations.
 
-    NB: filtering on categorical variables (e.g. SIREN) may cause slow queries
-     as our database is not optimized for such queries.
+    NB: filtering on categorical variables (e.g. SIREN) may cause slow queries as our
+    database is not optimized for such queries.
 
     Args:
-        date_min: first period to include, in the 'YYYY-MM-DD' format. Default is first.
-        date_max: first period to exclude, in the 'YYYY-MM-DD' format Default is latest.
-        fields: which fields of the Features collection to retrieve. Default is all.
-        sample_size: max number of (siret x period) rows to retrieve. Default is 1000.
-        outcome: restrict query to firms that fall in a specific outcome (True / False)
-        sirets: a list of SIRET to select
-        sirens: a list of SIREN to select
-        min_effectif: min number of employees for firm to be in the sample (defaults to your .env)
-        **categorical_filters can be any filter in the form `field = ["a", "b", "c"]`
+        date_min: First period to include, in the 'YYYY-MM-DD' format. Default is first.
+        date_max: First period to exclude, in the 'YYYY-MM-DD' format Default is latest.
+        fields: Which fields of the Features collection to retrieve. Default is all.
+        sample_size: Max number of (siret x period) rows to retrieve. Default is 1000.
+        outcome: Restrict query to firms that fall in a specific outcome (True / False)
+        sirets: A list of SIRET to select.
+        sirens: A list of SIREN to select.
+        min_effectif: Min number of employees for firm to be in the sample (defaults to
+         your `.env` value)
+        **categorical_filters: Can be any filter in the form `field = ["a", "b", "c"]`.
+
     """
 
-    def __init__(  # pylint: disable=too-many-arguments
+    def __init__(
         self,
         date_min: str = "1970-01-01",
         date_max: str = "3000-01-01",
@@ -45,6 +49,7 @@ class SFDataset:
         sirens: list = None,
         **categorical_filters,
     ):
+        # pylint: disable=too-many-arguments
         self._mongo_client = MongoClient(host=config.MONGODB_PARAMS.url)
         self._mongo_database = self._mongo_client.get_database(config.MONGODB_PARAMS.db)
         self._mongo_collection = self._mongo_database.get_collection(
@@ -62,7 +67,8 @@ class SFDataset:
 
         if categorical_filters or self.sirens or self.sirets:
             logging.warning(
-                "Queries using additional filters usually take longer (see function docstring)"
+                "Queries using additional filters usually take longer (see function "
+                "docstring)"
             )
         self.categorical_filters = categorical_filters
 
@@ -88,9 +94,10 @@ class SFDataset:
             self._mongo_collection = None
 
     def _make_pipeline(self):
-        """
-        Build MongoDB Aggregate pipeline for dataset
-         and store it in the `mongo_pipeline` attribute
+        """Builds MongoDB Aggregate pipeline for the dataset.
+
+        The Aggregate is stored in the `mongo_pipeline` attribute.
+
         """
         self.mongo_pipeline.reset()
 
@@ -113,11 +120,14 @@ class SFDataset:
         logging.debug(f"MongoDB Aggregate query: {self.mongo_pipeline.to_pipeline()}")
 
     def fetch_data(self, warn: bool = True):
-        """
-        Retrieve query from MongoDB database using the Aggregate framework
-        Store the resulting data in the `data` attribute
+        """Retrieve query from MongoDB database using the Aggregate framework.
+
+        Store the resulting data inside the `data` attribute.
+
         Args:
-            warn : emmit a warning if fetch_data is overwriting some already existing data
+            warn: A warning if fetch_data is overwriting some already existing
+              data.
+
         """
         self._make_pipeline()
 
@@ -139,20 +149,34 @@ class SFDataset:
         finally:
             cursor.close()
 
+        # create and fill missing fields with NAs
+        if self.fields is not None:
+            if not set(self.fields).issubset(set(self.data.columns)):
+                missing = set(self.fields) - set(self.data.columns)
+                logging.info(
+                    f"Creating missing columns {missing} and filling them with NAs."
+                )
+                for feat in missing:
+                    self.data[feat] = NAN
+
+        # force SIREN and SIRET to be strings and pad with zeroes.
+        if "siren" in self.data.columns:
+            self.data.siren = self.data.siren.astype(str).str.zfill(9)
+        if "siret" in self.data.columns:
+            self.data.siret = self.data.siret.astype(str).str.zfill(14)
         return self
 
     def raise_if_empty(self):
-        """
-        Check that dataset is filled with data
-        """
+        """Check that dataset is filled with data."""
         if len(self) == 0:
             raise EmptyDataset("Dataset is empty !")
         return self
 
     def explain(self):
-        """
-        Explain MongoDB query plan for Dataset
-         This is useful for debugging a long running MongoDB job.
+        """Explain MongoDB query plan for Dataset.
+
+        This is useful for debugging a long running MongoDB job.
+
         """
         self._make_pipeline()
         return self._mongo_database.command(
@@ -163,8 +187,11 @@ class SFDataset:
         )
 
     def remove_strong_signals(self):
-        """
-        Strong signals is when a firm is already in default (time_til_outcome <= 0)
+        """Removes entries for which a strong signal occurs.
+
+        A strong signal is defined as `time_til_outcome <= 0`: the firm is already
+        in default.
+
         """
         assert (
             "time_til_outcome" in self.data.columns
@@ -175,10 +202,13 @@ class SFDataset:
         return self
 
     def replace_missing_data(self, defaults_map: dict = None):
-        """
-        Replace missing data with defaults defined in project config
+        """Replaces missing data with default data.
+
         Args:
-            defaults_map: a dictionnary in the {column_name: default_value} format
+            defaults_map: A dictionnary in the {column_name: default_value} format.
+              If no argument is given, the method uses values defined in the project
+              configuration files.
+
         """
         if defaults_map is None:
             defaults_map = config.DEFAULT_DATA_VALUES
@@ -196,10 +226,11 @@ class SFDataset:
         return self
 
     def remove_na(self, ignore: list):
-        """
-        Remove all observations with missing values.
+        """Removes all observations with missing values.
+
         Args:
-            ignore: a list of column names to ignore when dropping NAs
+            ignore: A list of column names to ignore when dropping NAs.
+
         """
 
         cols_drop_na = set(self.data.columns).difference(set(ignore))
@@ -207,7 +238,8 @@ class SFDataset:
         logging.info("Removing NAs from dataset.")
         for feature in cols_drop_na:
             logging.debug(
-                f"Rows with NAs in field {feature} will be dropped, unless default val is provided"
+                f"Rows with NAs in field {feature} will be dropped, unless default val "
+                "is provided"
             )
 
         for feature in ignore:
@@ -220,11 +252,12 @@ class SFDataset:
         return self
 
     def remove_siren(self, siren_list: list):
-        """
-        Removes all observations corresponding to
-        one of the siren provided as input.
+        """Removes all observations associated with given SIREN values.
+
         Args:
-            siren_list: a list of siren to be removed from the data.
+            siren_list: A list of SIREN associated with the data that should
+              be dropped.
+
         """
         orig_length = len(self)
         self.data = self.data[~self.data["siren"].isin(siren_list)]
@@ -250,25 +283,28 @@ Number of observations = {len(self) if isinstance(self.data, pd.DataFrame) else 
         return self.__repr__()
 
     def __len__(self):
-        """
-        Length of SFDataset is the length of its dataframe
+        """Returns the dataset length.
+
+        Returns:
+            Length of SFDataset, defined as the length of the underlying DataFrame.
+
         """
         return len(self.data) if isinstance(self.data, pd.DataFrame) else 0
 
     @staticmethod
     def __cursor_to_df(cursor: Cursor):
-        """
-        Extract data from a MongoDB cursor into a Pandas dataframe
-        """
+        """Extracts data from a MongoDB cursor into a Pandas dataframe."""
         return pd.DataFrame(cursor)
 
 
 class OversampledSFDataset(SFDataset):
-    """
-    Helper class to oversample a SFDataset
+    """Helper class for SFDataset oversampling.
+
     Args:
-        proportion_positive_class: the desired proportion of firms for which outcome = True
-    All other arguments are documented in the SFDataset docstring
+        proportion_positive_class: The desired proportion of firms for which
+          `outcome == True`
+        **kwargs: All keyword arguments are documented in the SFDataset docstring.
+
     """
 
     def __init__(self, proportion_positive_class: float, **kwargs):
@@ -280,9 +316,10 @@ class OversampledSFDataset(SFDataset):
 
     @is_random
     def fetch_data(self):  # pylint: disable=arguments-differ
-        """
-        Retrieve query from MongoDB database using the Aggregate framework
-        Store the resulting data in the `data` attribute
+        """Retrieves query from MongoDB database using the Aggregate framework.
+
+        Stores the resulting data inside the `data` attribute.
+
         """
         # compute the number of lines to fetch with outcome = True
         n_obs_true = round(self.proportion_positive_class * self.sample_size)
@@ -305,6 +342,85 @@ class OversampledSFDataset(SFDataset):
 
 
 class EmptyDataset(Exception):
+    """Custom error for empty datasets."""
+
+
+def build_synthetic_dataset(
+    base_dataset: SFDataset,
+    cont_variables: Iterable,
+    cat_variables: Iterable,
+    group_size: int = 5,
+) -> SFDataset:
+    """Builds a dummy dataset, populated with mock establishments.
+
+    A mock establishment is generated by aggregating data from a given number of real
+    establishments that are similar and share some properties. Each mock establishment
+    is built using `group_size` real establishment picked from a given business field
+    ("code APE niveau 3").
+
+    Args:
+        base_dataset: The dataset to build a synthetic extract from.
+        cont_variables: The list of continuous variables from collection Features to
+          include in the extract.
+        cat_variables: The list of categorical variables from collection Features to
+          include in the extract.
+        group_size: The number of real establishments required to build a mock
+          establishment from.
+
+    Returns:
+        The dummy SFDataset.
+
     """
-    Custom error for empty datasets
-    """
+    # Finding subsectors with enough SIRET to build a synthetic
+    subsectors_count = base_dataset.data.groupby("code_ape_niveau3").agg(
+        siret_count=("siret", "count")
+    )
+    repr_subsectors = subsectors_count[
+        subsectors_count["siret_count"] > group_size
+    ].index.tolist()
+    models = base_dataset.data[
+        base_dataset.data["code_ape_niveau3"].isin(repr_subsectors)
+    ]
+
+    # Building a random ranking by ape3 that we will use to generate synthetics
+    models["ranker"] = random.rand(models.shape[0])
+    models["within_ape3_id"] = models.groupby("code_ape_niveau3")["ranker"].rank()
+    models["within_ape3_group_id"] = models["within_ape3_id"] % group_size
+
+    # Filtering synthesis set
+    cont_agg_dct = {cont_var: "mean" for cont_var in cont_variables}
+    dflt_agg_dct = {"periode": "max"}
+
+    agg_dct = dict(cont_agg_dct, **dflt_agg_dct)
+
+    within_ape3_ref = models.groupby(
+        ["code_ape_niveau3", "within_ape3_group_id"]
+    ).within_ape3_id.idxmin()
+    synthetic_cont = models.groupby(["code_ape_niveau3", "within_ape3_group_id"]).agg(
+        agg_dct
+    )
+
+    cat_references = models.loc[within_ape3_ref]
+    cat_references.index = pd.MultiIndex.from_frame(
+        cat_references[["code_ape_niveau3", "within_ape3_group_id"]]
+    )
+    cat_references.drop(
+        ["code_ape_niveau3", "within_ape3_group_id"], axis=1, inplace=True
+    )
+
+    synthetic = pd.merge(
+        synthetic_cont,
+        cat_references[cat_variables],
+        on=["code_ape_niveau3", "within_ape3_group_id"],
+        how="inner",
+    )
+
+    synthetic["siret"] = random.randint(1e13, 1e14 - 1, len(synthetic)).astype(str)
+    synthetic["siren"] = synthetic["siret"].apply(lambda siret: siret[:9])
+
+    synthetic.set_index("siret", inplace=True, drop=False)
+    synthetic = synthetic[
+        ["siret", "siren", "periode", "outcome"] + cat_variables + cont_variables
+    ]
+
+    return synthetic
